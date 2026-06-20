@@ -7,8 +7,10 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
@@ -24,21 +26,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.tama.gallerynoai.data.repository.MediaRepository
-import com.tama.gallerynoai.data.settings.SettingsManager
 import com.tama.gallerynoai.ui.navigation.NavRoutes
+import androidx.compose.ui.graphics.toArgb
 import com.tama.gallerynoai.ui.theme.GalleryTheme
 import com.tama.gallerynoai.ui.viewmodel.GalleryViewModel
-import com.tama.gallerynoai.ui.viewmodel.GalleryViewModelFactory
 import com.tama.gallerynoai.ui.viewmodel.SettingsViewModel
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -58,8 +61,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private lateinit var galleryViewModel: GalleryViewModel
-    private lateinit var settingsViewModel: SettingsViewModel
+    private val galleryViewModel: GalleryViewModel by viewModels()
+    private val settingsViewModel: SettingsViewModel by viewModels()
 
     private val commonLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -74,22 +77,10 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         
-        val settingsManager = SettingsManager(this)
-        val database = com.tama.gallerynoai.data.local.db.MediaDatabase.getDatabase(this)
-        val repository = MediaRepository(this, database)
-        val factory = GalleryViewModelFactory(repository, settingsManager)
-        
-        galleryViewModel = ViewModelProvider(this, factory)[GalleryViewModel::class.java]
-        settingsViewModel = ViewModelProvider(this, factory)[SettingsViewModel::class.java]
-        
         setContent {
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
-            val fontFamily by settingsViewModel.fontFamily.collectAsStateWithLifecycle()
             val amoledMode by settingsViewModel.amoledMode.collectAsStateWithLifecycle()
             val themeColor by settingsViewModel.themeColor.collectAsStateWithLifecycle()
-            val accentColorInt by settingsViewModel.accentColor.collectAsStateWithLifecycle()
-            val secondaryColorInt by settingsViewModel.secondaryColor.collectAsStateWithLifecycle()
-            val tertiaryColorInt by settingsViewModel.tertiaryColor.collectAsStateWithLifecycle()
             val showNavLabel by settingsViewModel.showNavLabel.collectAsStateWithLifecycle()
             
             val darkTheme = when (themeMode) {
@@ -101,12 +92,15 @@ class MainActivity : ComponentActivity() {
             GalleryTheme(
                 darkTheme = darkTheme,
                 themeColor = themeColor,
-                fontFamilyName = fontFamily,
-                amoledMode = amoledMode,
-                accentColor = if (accentColorInt == 0xFF6650a4.toInt()) null else Color(accentColorInt),
-                secondaryColor = if (secondaryColorInt == 0xFF625b71.toInt()) null else Color(secondaryColorInt),
-                tertiaryColor = if (tertiaryColorInt == 0xFF7D5260.toInt()) null else Color(tertiaryColorInt)
+                amoledMode = amoledMode
             ) {
+                LaunchedEffect(darkTheme) {
+                    enableEdgeToEdge(
+                        statusBarStyle = androidx.activity.SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT) { !darkTheme },
+                        navigationBarStyle = androidx.activity.SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT) { !darkTheme }
+                    )
+                }
+
                 val navController = rememberNavController()
                 
                 // Handle incoming intent
@@ -208,14 +202,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun getRequiredPermissions(): Array<String> {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO
-            )
+        val permissions = mutableListOf<String>()
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.READ_MEDIA_IMAGES)
+            permissions.add(Manifest.permission.READ_MEDIA_VIDEO)
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                permissions.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            }
         } else {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
+        
+        return permissions.toTypedArray()
     }
 
     private fun hasAllPermissions(): Boolean {
@@ -225,11 +225,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Photos : Screen("photos", "Photos", Icons.Default.Photo)
-    object Search : Screen("search", "Search", Icons.Default.Search)
-    object Albums : Screen("albums", "Albums", Icons.Default.Collections)
-    object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+sealed class Screen(val route: String, val labelId: Int, val icon: ImageVector) {
+    object Photos : Screen(NavRoutes.PHOTOS, R.string.nav_photos, Icons.Default.Photo)
+    object Search : Screen(NavRoutes.SEARCH, R.string.nav_search, Icons.Default.Search)
+    object Albums : Screen(NavRoutes.ALBUMS, R.string.nav_albums, Icons.Default.Collections)
+    object Settings : Screen(NavRoutes.SETTINGS, R.string.nav_settings, Icons.Default.Settings)
 }
 
 @Composable
@@ -252,7 +252,10 @@ fun BottomNavigationBar(
             NavRoutes.QUICK_ACCESS
         )
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp
+    ) {
         items.forEach { screen ->
             val isSelected = when (screen) {
                 Screen.Photos -> (currentDestination?.route in listOf(NavRoutes.PHOTOS, NavRoutes.DETAIL)) || 
@@ -270,7 +273,7 @@ fun BottomNavigationBar(
             }
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = null) },
-                label = if (showLabel) { { Text(screen.label) } } else null,
+                label = if (showLabel) { { Text(stringResource(screen.labelId)) } } else null,
                 selected = isSelected,
                 onClick = {
                     if (isSelected) {
@@ -294,4 +297,3 @@ fun BottomNavigationBar(
         }
     }
 }
-

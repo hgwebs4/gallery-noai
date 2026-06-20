@@ -59,9 +59,12 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.model.MediaItem
 import com.tama.gallerynoai.data.settings.FullscreenRotationMode
 import com.tama.gallerynoai.ui.components.AddTagDialog
+import com.tama.gallerynoai.ui.components.RenameDialog
 import com.tama.gallerynoai.ui.components.bouncyClick
 import com.tama.gallerynoai.ui.components.ZoomableBox
 import com.tama.gallerynoai.ui.viewmodel.GalleryViewModel
@@ -93,6 +96,13 @@ fun MediaDetailScreen(
     onBackClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val attributionContext = remember(context) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            context.createAttributionContext("mediaAccess")
+        } else {
+            context
+        }
+    }
 
     val useDefaultEditor by viewModel.useDefaultEditor.collectAsState()
     val autoPlayVideo by viewModel.autoPlayVideo.collectAsState()
@@ -101,6 +111,7 @@ fun MediaDetailScreen(
     val useDefaultVideoEditor by viewModel.useDefaultVideoEditor.collectAsState()
     val defaultVideoEditorPackage by viewModel.defaultVideoEditorPackage.collectAsState()
     val fullscreenRotationMode by viewModel.fullscreenRotationMode.collectAsState()
+    val enableVideoPreload by viewModel.enableVideoPreload.collectAsState()
 
     val initialIndex = remember(items, initialId) {
         val index = items.indexOfFirst { it.id == initialId }
@@ -132,10 +143,10 @@ fun MediaDetailScreen(
     val uiToggleAlpha by animateFloatAsState(
         targetValue = if (isUiVisible) 1f else 0f,
         animationSpec = tween(durationMillis = 300),
-        label = "uiToggleAlpha"
+        label = "uiToggleAlpha",
     )
 
-    var isManualFullScreen by remember { mutableStateOf(false) }
+    var isManualFullScreen by remember { mutableStateOf(value = false) }
     var isZoomed by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -163,6 +174,7 @@ fun MediaDetailScreen(
     var showInfoSheet by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showAddTagDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
     var currentVideoSize by remember { mutableStateOf<IntSize?>(null) }
 
     val focusManager = LocalFocusManager.current
@@ -192,7 +204,7 @@ fun MediaDetailScreen(
                     val width = if (item.isVideo) videoSize?.width ?: item.width else item.width
                     val height = if (item.isVideo) videoSize?.height ?: item.height else item.height
 
-                    if (width != null && height != null && width > height) {
+                    if (width != null && height != null && (width > height)) {
                         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                     } else {
                         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -233,6 +245,15 @@ fun MediaDetailScreen(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            onRefresh()
+        }
+    }
+
+    val renameLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.onRenameConfirmed()
             onRefresh()
         }
     }
@@ -375,7 +396,9 @@ fun MediaDetailScreen(
                             }
                         },
                         resetTrigger = pagerState.currentPage,
-                        uiAlpha = finalUiAlpha
+                        uiAlpha = finalUiAlpha,
+                        preloadNext = enableVideoPreload && isPageVisible,
+                        nextItem = if (enableVideoPreload && isPageVisible && page + 1 < items.size) items[page + 1] else null
                     )
                 }
             }
@@ -402,7 +425,7 @@ fun MediaDetailScreen(
                                 IconButton(onClick = onBackClick) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
+                                        contentDescription = stringResource(R.string.back),
                                         tint = Color.White
                                     )
                                 }
@@ -411,25 +434,32 @@ fun MediaDetailScreen(
                                 IconButton(onClick = { shareMedia(currentItemVal) }) {
                                     Icon(
                                         Icons.Default.Share,
-                                        contentDescription = "Share",
+                                        contentDescription = stringResource(R.string.share),
                                         tint = Color.White
                                     )
                                 }
-                                if (!currentItemVal.isVideo) {
-                                    Box {
-                                        IconButton(onClick = { showMoreMenu = true }) {
-                                            Icon(
-                                                Icons.Default.MoreVert,
-                                                contentDescription = "More",
-                                                tint = Color.White
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = showMoreMenu,
-                                            onDismissRequest = { showMoreMenu = false }
-                                        ) {
+                                Box {
+                                    IconButton(onClick = { showMoreMenu = true }) {
+                                        Icon(
+                                            Icons.Default.MoreVert,
+                                            contentDescription = stringResource(R.string.more),
+                                            tint = Color.White
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showMoreMenu,
+                                        onDismissRequest = { showMoreMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.rename)) },
+                                            onClick = {
+                                                showRenameDialog = true
+                                                showMoreMenu = false
+                                            }
+                                        )
+                                        if (!currentItemVal.isVideo) {
                                             DropdownMenuItem(
-                                                text = { Text("Use as...") },
+                                                text = { Text(stringResource(R.string.use_as)) },
                                                 onClick = {
                                                     useAs(currentItemVal)
                                                     showMoreMenu = false
@@ -460,21 +490,22 @@ fun MediaDetailScreen(
                             ) {
                                 DetailActionItem(
                                     icon = if (currentItemVal.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    label = if (currentItemVal.isFavorite) "Unfavorite" else "Favorite",
+                                    label = if (currentItemVal.isFavorite) stringResource(R.string.unfavorite) else stringResource(R.string.favorite),
                                     onClick = { toggleFavorite(currentItemVal) },
                                     iconTint = if (currentItemVal.isFavorite) Color.Red else Color.White
                                 )
                                 DetailActionItem(
                                     icon = Icons.Default.Edit,
-                                    label = "Edit",
-                                    onClick = { editMedia(currentItemVal) })
+                                    label = stringResource(R.string.edit),
+                                    onClick = { editMedia(currentItemVal) }
+                                )
                                 DetailActionItem(
                                     icon = Icons.Default.Info,
-                                    label = "Info",
+                                    label = stringResource(R.string.info),
                                     onClick = { showInfoSheet = true })
                                 DetailActionItem(
                                     icon = Icons.Default.Delete,
-                                    label = "Delete",
+                                    label = stringResource(R.string.delete),
                                     onClick = { deleteMedia(currentItemVal) })
                             }
                         }
@@ -486,6 +517,7 @@ fun MediaDetailScreen(
         if (showInfoSheet && currentItemVal != null) {
             MediaInfoBottomSheet(
                 item = currentItemVal,
+                context = attributionContext,
                 onAddTag = { showAddTagDialog = true },
                 onTagClick = { tag ->
                     focusManager.clearFocus()
@@ -497,12 +529,11 @@ fun MediaDetailScreen(
                         item = currentItemVal,
                         customTags = currentItemVal.customTags - tag
                     )
-                },
-                onDismiss = {
-                    focusManager.clearFocus()
-                    showInfoSheet = false
                 }
-            )
+            ) {
+                focusManager.clearFocus()
+                showInfoSheet = false
+            }
         }
 
         if (showAddTagDialog && currentItemVal != null) {
@@ -520,6 +551,22 @@ fun MediaDetailScreen(
                 }
             )
         }
+
+        if (showRenameDialog && currentItemVal != null) {
+            RenameDialog(
+                currentName = currentItemVal.name,
+                onDismiss = { showRenameDialog = false },
+                onConfirm = { newName ->
+                    val intentSender = viewModel.renameMedia(currentItemVal, newName)
+                    if (intentSender != null) {
+                        renameLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                    } else {
+                        onRefresh()
+                    }
+                    showRenameDialog = false
+                }
+            )
+        }
     }
 }
 
@@ -527,13 +574,13 @@ fun MediaDetailScreen(
 @Composable
 fun MediaInfoBottomSheet(
     item: MediaItem,
+    context: Context = LocalContext.current,
     onAddTag: () -> Unit,
     onTagClick: (String) -> Unit,
     onRemoveTag: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        val context = LocalContext.current
         val configuration = LocalConfiguration.current
         val locale = remember(configuration) {
             try {
@@ -576,14 +623,26 @@ fun MediaInfoBottomSheet(
             InfoRow(label = "Size", value = String.format(locale, "%.2f MB", item.size / (1024.0 * 1024.0)))
 
             detailedMetadata?.let { metadata ->
-                metadata.cameraModel?.let { InfoRow(label = "Camera Model", value = it) }
+                val cameraInfo = listOfNotNull(
+                    metadata.cameraMake,
+                    metadata.cameraModel
+                ).joinToString(" ")
+                if (cameraInfo.isNotBlank()) {
+                    InfoRow(label = "Device", value = cameraInfo)
+                }
 
-                if (metadata.aperture != null || metadata.iso != null || metadata.shutterSpeed != null || metadata.focalLength != null) {
+                metadata.software?.let { InfoRow(label = "Software", value = it) }
+
+                if (metadata.aperture != null || metadata.iso != null || metadata.shutterSpeed != null || 
+                    metadata.focalLength != null || metadata.flash != null || metadata.whiteBalance != null) {
+                    
                     val exposureInfo = listOfNotNull(
                         metadata.aperture,
                         metadata.shutterSpeed,
                         metadata.iso?.let { "ISO $it" },
-                        metadata.focalLength
+                        metadata.focalLength,
+                        metadata.flash,
+                        metadata.whiteBalance?.let { "WB: $it" }
                     ).joinToString(" • ")
                     InfoRow(label = "Exposure Info", value = exposureInfo)
                 }
@@ -661,7 +720,9 @@ fun MediaPage(
     onTap: () -> Unit,
     onVideoSizeDetermined: (IntSize) -> Unit,
     resetTrigger: Any?,
-    uiAlpha: Float = 1f
+    uiAlpha: Float = 1f,
+    preloadNext: Boolean = false,
+    nextItem: MediaItem? = null
 ) {
     ZoomableBox(
         onZoomChange = onZoomChange,
@@ -679,7 +740,9 @@ fun MediaPage(
                 bottomPadding = bottomPadding,
                 onFullScreenToggle = onFullScreenToggle,
                 onVideoSizeDetermined = onVideoSizeDetermined,
-                uiAlpha = uiAlpha
+                uiAlpha = uiAlpha,
+                preloadNext = preloadNext,
+                nextItem = nextItem
             )
         } else {
             PhotoPage(item = item)
@@ -692,8 +755,6 @@ fun PhotoPage(item: MediaItem) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(item.uri)
-            .precision(coil.size.Precision.EXACT)
-            .size(coil.size.Size.ORIGINAL)
             .placeholderMemoryCacheKey("${item.uri}_thumb")
             .crossfade(200)
             .build(),
@@ -715,10 +776,16 @@ fun VideoPage(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onFullScreenToggle: () -> Unit,
     onVideoSizeDetermined: (IntSize) -> Unit,
-    uiAlpha: Float = 1f
+    uiAlpha: Float = 1f,
+    preloadNext: Boolean = false,
+    nextItem: MediaItem? = null
 ) {
     val context = LocalContext.current
+    val formatNotSupported = stringResource(R.string.format_not_supported)
+    val failedToPlayVideo = stringResource(R.string.failed_to_play_video)
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var nextExoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var playbackError by remember { mutableStateOf<String?>(null) }
 
     // 1. Manage ExoPlayer lifecycle
     DisposableEffect(item.uri) {
@@ -728,6 +795,15 @@ fun VideoPage(
                 override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                     if (videoSize.width > 0 && videoSize.height > 0) {
                         onVideoSizeDetermined(IntSize(videoSize.width, videoSize.height))
+                    }
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    playbackError = when (error.errorCode) {
+                        androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                        androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED -> 
+                            formatNotSupported
+                        else -> failedToPlayVideo
                     }
                 }
             })
@@ -740,6 +816,29 @@ fun VideoPage(
         onDispose {
             player.release()
             exoPlayer = null
+        }
+    }
+
+    // Preload next video
+    LaunchedEffect(preloadNext, nextItem) {
+        if (preloadNext && nextItem?.isVideo == true) {
+            val player = ExoPlayer.Builder(context).build().apply {
+                setMediaItem(Media3Item.fromUri(nextItem.uri))
+                prepare()
+                playWhenReady = false
+                volume = 0f
+            }
+            nextExoPlayer = player
+        } else {
+            nextExoPlayer?.release()
+            nextExoPlayer = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            nextExoPlayer?.release()
+            nextExoPlayer = null
         }
     }
 
@@ -766,6 +865,30 @@ fun VideoPage(
                     view.player = exoPlayer
                 }
             )
+
+            if (playbackError != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = playbackError!!,
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
 
             VideoPlayerControls(
                 modifier = Modifier
@@ -847,7 +970,7 @@ fun VideoPlayerControls(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { player.seekTo((player.currentPosition - 10000).coerceAtLeast(0)) }) {
-                    Icon(Icons.Default.Replay10, contentDescription = "Rewind 10s", tint = Color.White, modifier = Modifier.size(48.dp))
+                    Icon(Icons.Default.Replay10, contentDescription = stringResource(R.string.rewind_10s), tint = Color.White, modifier = Modifier.size(48.dp))
                 }
 
                 IconButton(
@@ -859,14 +982,14 @@ fun VideoPlayerControls(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
                         tint = Color.White,
                         modifier = Modifier.size(64.dp)
                     )
                 }
 
                 IconButton(onClick = { player.seekTo((player.currentPosition + 10000).coerceAtMost(player.duration)) }) {
-                    Icon(Icons.Default.Forward10, contentDescription = "Forward 10s", tint = Color.White, modifier = Modifier.size(48.dp))
+                    Icon(Icons.Default.Forward10, contentDescription = stringResource(R.string.forward_10s), tint = Color.White, modifier = Modifier.size(48.dp))
                 }
             }
 
@@ -891,7 +1014,7 @@ fun VideoPlayerControls(
 
                     Box {
                         IconButton(onClick = { showSettingsMenu = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings), tint = Color.White)
                         }
 
                         DropdownMenu(
@@ -899,7 +1022,7 @@ fun VideoPlayerControls(
                             onDismissRequest = { showSettingsMenu = false }
                         ) {
                             Text(
-                                "Playback Speed",
+                                stringResource(R.string.playback_speed),
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
@@ -926,7 +1049,7 @@ fun VideoPlayerControls(
 
                             DropdownMenuItem(
                                 text = {
-                                    Text(if (repeatMode == Player.REPEAT_MODE_ONE) "Repeat: On" else "Repeat: Off")
+                                    Text(if (repeatMode == Player.REPEAT_MODE_ONE) stringResource(R.string.repeat_on) else stringResource(R.string.repeat_off))
                                 },
                                 onClick = {
                                     val newMode = if (repeatMode == Player.REPEAT_MODE_ONE) {
@@ -954,14 +1077,14 @@ fun VideoPlayerControls(
                     }) {
                         Icon(
                             imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = if (isMuted) "Unmute" else "Mute",
+                            contentDescription = if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute),
                             tint = Color.White
                         )
                     }
                     IconButton(onClick = onFullScreenToggle) {
                         Icon(
                             imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                            contentDescription = if (isFullScreen) "Exit Full Screen" else "Full Screen",
+                            contentDescription = if (isFullScreen) stringResource(R.string.exit_full_screen) else stringResource(R.string.full_screen),
                             tint = Color.White
                         )
                     }

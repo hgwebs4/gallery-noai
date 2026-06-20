@@ -5,28 +5,38 @@ import androidx.lifecycle.viewModelScope
 import com.tama.gallerynoai.data.settings.AppThemeColor
 import com.tama.gallerynoai.data.settings.FullscreenRotationMode
 import com.tama.gallerynoai.data.settings.SettingsManager
-import kotlinx.coroutines.flow.*
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import com.tama.gallerynoai.data.model.AlbumItem
+import com.tama.gallerynoai.data.repository.MediaRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
 
-class SettingsViewModel(
-    private val settingsManager: SettingsManager
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    val settingsManager: SettingsManager,
+    private val repository: MediaRepository
 ) : ViewModel() {
 
+    val themeMode: StateFlow<String> = settingsManager.themeMode
+    val themeColor: StateFlow<AppThemeColor> = settingsManager.themeColor
+    val dateFormat: StateFlow<String> = settingsManager.dateFormat
     val useDefaultEditor: StateFlow<Boolean> = settingsManager.useDefaultEditor
     val defaultEditorPackage: StateFlow<String?> = settingsManager.defaultEditorPackage
     val useDefaultVideoEditor: StateFlow<Boolean> = settingsManager.useDefaultVideoEditor
     val autoPlayVideo: StateFlow<Boolean> = settingsManager.autoPlayVideo
     val defaultMuteVideo: StateFlow<Boolean> = settingsManager.defaultMuteVideo
     val defaultVideoEditorPackage: StateFlow<String?> = settingsManager.defaultVideoEditorPackage
-    val themeMode: StateFlow<String> = settingsManager.themeMode
-    val accentColor: StateFlow<Int> = settingsManager.accentColor
-    val secondaryColor: StateFlow<Int> = settingsManager.secondaryColor
-    val tertiaryColor: StateFlow<Int> = settingsManager.tertiaryColor
-    val dateFormat: StateFlow<String> = settingsManager.dateFormat
+    val enableVideoPreload: StateFlow<Boolean> = settingsManager.enableVideoPreload
+    val hiddenAlbumIds: StateFlow<Set<String>> = settingsManager.hiddenAlbumIds
+    val quickAccessItems: StateFlow<Set<String>> = settingsManager.quickAccessItems
     val searchAllFilesByDefault: StateFlow<Boolean> = settingsManager.searchAllFilesByDefault
-    val fontFamily: StateFlow<String> = settingsManager.fontFamily
     val amoledMode: StateFlow<Boolean> = settingsManager.amoledMode
-    val themeColor: StateFlow<AppThemeColor> = settingsManager.themeColor
     val gridColumns: StateFlow<Int> = settingsManager.gridColumns
     val fullscreenRotationMode: StateFlow<FullscreenRotationMode> = settingsManager.fullscreenRotationMode
     val diskCacheMb: StateFlow<Int> = settingsManager.diskCacheMb
@@ -34,94 +44,38 @@ class SettingsViewModel(
     val defaultSort: StateFlow<String> = settingsManager.defaultSort
     val trashWarningEnabled: StateFlow<Boolean> = settingsManager.trashWarningEnabled
 
-    private val _scrollToTopTrigger = MutableSharedFlow<String>(replay = 0)
-    val scrollToTopTrigger: SharedFlow<String> = _scrollToTopTrigger.asSharedFlow()
+    private val _scrollToTopTrigger = MutableSharedFlow<Unit>(replay = 0)
+    val scrollToTopTrigger: SharedFlow<Unit> = _scrollToTopTrigger.asSharedFlow()
 
-    fun toggleUseDefaultEditor(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setUseDefaultEditor(enabled) }
+    fun triggerScrollToTop() {
+        viewModelScope.launch {
+            _scrollToTopTrigger.emit(Unit)
+        }
     }
 
-    fun toggleUseDefaultVideoEditor(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setUseDefaultVideoEditor(enabled) }
-    }
+    fun setThemeMode(mode: String) = settingsManager.setThemeMode(mode)
+    fun setThemeColor(color: AppThemeColor) = settingsManager.setThemeColor(color)
+    fun setDateFormat(format: String) = settingsManager.setDateFormat(format)
+    fun toggleUseDefaultEditor(enabled: Boolean) = settingsManager.setUseDefaultEditor(enabled)
+    fun setDefaultEditorPackage(packageName: String?) = settingsManager.setDefaultEditorPackage(packageName)
+    fun toggleUseDefaultVideoEditor(enabled: Boolean) = settingsManager.setUseDefaultVideoEditor(enabled)
+    fun setAutoPlayVideo(enabled: Boolean) = settingsManager.setAutoPlayVideo(enabled)
+    fun setDefaultMuteVideo(enabled: Boolean) = settingsManager.setDefaultMuteVideo(enabled)
+    fun setDefaultVideoEditorPackage(packageName: String?) = settingsManager.setDefaultVideoEditorPackage(packageName)
+    fun setEnableVideoPreload(enabled: Boolean) = settingsManager.setEnableVideoPreload(enabled)
+    fun setHiddenAlbumIds(ids: Set<String>) = settingsManager.setHiddenAlbumIds(ids)
+    fun toggleAlbumHidden(id: String) = settingsManager.toggleAlbumHidden(id)
+    fun setQuickAccessItems(items: Set<String>) = settingsManager.setQuickAccessItems(items)
+    fun setSearchAllFilesByDefault(enabled: Boolean) = settingsManager.setSearchAllFilesByDefault(enabled)
+    fun setAmoledMode(enabled: Boolean) = settingsManager.setAmoledMode(enabled)
+    fun setGridColumns(columns: Int) = settingsManager.setGridColumns(columns)
+    fun setFullscreenRotationMode(mode: FullscreenRotationMode) = settingsManager.setFullscreenRotationMode(mode)
+    fun setDiskCacheMb(mb: Int) = settingsManager.setDiskCacheMb(mb)
+    fun setShowNavLabel(show: Boolean) = settingsManager.setShowNavLabel(show)
+    fun setDefaultSort(sort: String) = settingsManager.setDefaultSort(sort)
+    fun setTrashWarningEnabled(enabled: Boolean) = settingsManager.setTrashWarningEnabled(enabled)
 
-    fun setAutoPlayVideo(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setAutoPlayVideo(enabled) }
-    }
-
-    fun setDefaultMuteVideo(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setDefaultMuteVideo(enabled) }
-    }
-
-    fun setThemeMode(mode: String) {
-        viewModelScope.launch { settingsManager.setThemeMode(mode) }
-    }
-
-    fun setThemeColor(color: AppThemeColor) {
-        viewModelScope.launch { settingsManager.setThemeColor(color) }
-    }
-
-    fun setAccentColor(color: Int) {
-        viewModelScope.launch { settingsManager.setAccentColor(color) }
-    }
-
-    fun setSecondaryColor(color: Int) {
-        viewModelScope.launch { settingsManager.setSecondaryColor(color) }
-    }
-
-    fun setTertiaryColor(color: Int) {
-        viewModelScope.launch { settingsManager.setTertiaryColor(color) }
-    }
-
-    fun setDateFormat(format: String) {
-        viewModelScope.launch { settingsManager.setDateFormat(format) }
-    }
-
-    fun setDefaultEditorPackage(pkg: String?) {
-        viewModelScope.launch { settingsManager.setDefaultEditorPackage(pkg) }
-    }
-
-    fun setDefaultVideoEditorPackage(pkg: String?) {
-        viewModelScope.launch { settingsManager.setDefaultVideoEditorPackage(pkg) }
-    }
-
-    fun setSearchAllFilesByDefault(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setSearchAllFilesByDefault(enabled) }
-    }
-
-    fun setFontFamily(fontFamily: String) {
-        viewModelScope.launch { settingsManager.setFontFamily(fontFamily) }
-    }
-
-    fun setAmoledMode(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setAmoledMode(enabled) }
-    }
-
-    fun setGridColumns(columns: Int) {
-        viewModelScope.launch { settingsManager.setGridColumns(columns) }
-    }
-
-    fun setFullscreenRotationMode(mode: FullscreenRotationMode) {
-        viewModelScope.launch { settingsManager.setFullscreenRotationMode(mode) }
-    }
-
-    fun setDiskCacheMb(mb: Int) {
-        viewModelScope.launch { settingsManager.setDiskCacheMb(mb) }
-    }
-
-    fun setShowNavLabel(show: Boolean) {
-        viewModelScope.launch { settingsManager.setShowNavLabel(show) }
-    }
-
-    fun setDefaultSort(sort: String) {
-        viewModelScope.launch { settingsManager.setDefaultSort(sort) }
-    }
-
-    fun setTrashWarningEnabled(enabled: Boolean) {
-        viewModelScope.launch { settingsManager.setTrashWarningEnabled(enabled) }
-    }
-
-    fun triggerScrollToTop(route: String = "") {
-        viewModelScope.launch { _scrollToTopTrigger.emit(route) }
+    fun getAllAlbumsFlow(): Flow<List<AlbumItem>> = flow {
+        emit(repository.getAllAlbums())
     }
 }

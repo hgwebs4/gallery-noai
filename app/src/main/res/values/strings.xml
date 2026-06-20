@@ -1,3 +1,196 @@
 <resources>
     <string name="app_name">gallery noai</string>
+    <string name="media_access_attribution_label">Media Access</string>
+
+    <!-- General UI -->
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="clear">Clear</string>
+    <string name="clear_all">Clear All</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="info">Info</string>
+    <string name="more">More</string>
+    <string name="options">Options</string>
+    <string name="remove">Remove</string>
+    <string name="rename">Rename</string>
+    <string name="restore">Restore</string>
+    <string name="search">Search</string>
+    <string name="select">Select</string>
+    <string name="share">Share</string>
+    <string name="ok">OK</string>
+
+    <!-- Navigation -->
+    <string name="nav_photos">Photos</string>
+    <string name="nav_albums">Albums</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_search">Search</string>
+
+    <!-- Photos Screen -->
+    <string name="no_photos_found">No photos or videos found</string>
+    <string name="selected_count">%d Selected</string>
+    <string name="clear_selection">Clear Selection</string>
+    <string name="move_to_trash">Move to Trash</string>
+    <string name="select_all">Select All</string>
+    <string name="favorite">Favorite</string>
+    <string name="unfavorite">Unfavorite</string>
+    <string name="add_tag">Add Tag</string>
+    <string name="copy_to_folder">Copy to folder</string>
+    <string name="move_to_folder">Move to folder</string>
+    <string name="share_media">Share media</string>
+
+    <!-- Sort Options -->
+    <string name="sort_date_newest">Date (Newest)</string>
+    <string name="sort_date_oldest">Date (Oldest)</string>
+    <string name="sort_size_largest">Size (Largest)</string>
+    <string name="sort_size_smallest">Size (Smallest)</string>
+
+    <!-- Search Screen -->
+    <string name="search_placeholder">Search photos, videos, tags…</string>
+    <string name="no_results_found">No results found for \"%s\"</string>
+    <string name="recent_searches">Recent Searches</string>
+    <string name="your_tags">Your Tags</string>
+    <string name="search_hint">Search for filenames or tags.</string>
+    <string name="recent">Recent</string>
+
+    <!-- Albums Screen -->
+    <string name="no_albums_found">No albums found</string>
+    <string name="favorites">Favorites</string>
+    <string name="trash">Trash</string>
+    <string name="videos">Videos</string>
+    <string name="screenshots">Screenshots</string>
+    <string name="items_count">%1$d items</string>
+    <string name="items_with_size">%1$d items • %2$s</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_general">General</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_privacy_storage">Privacy &amp; Storage</string>
+    <string name="settings_editor">Editor Settings</string>
+
+    <string name="default_sort_order">Default Sort Order</string>
+    <string name="search_all_files">Search All Files</string>
+    <string name="search_all_files_desc">Search recursively across all device directories</string>
+    <string name="date_format">Date Format</string>
+    <string name="fullscreen_rotation_mode">Fullscreen Rotation Mode</string>
+
+    <string name="grid_columns">Grid Columns</string>
+    <string name="grid_columns_count">%d columns</string>
+    <string name="grid_padding">Grid Padding</string>
+    <string name="show_nav_labels">Show Navigation Labels</string>
+    <string name="show_nav_labels_desc">Show text labels in the bottom navigation bar</string>
+    <string name="app_theme">App Theme</string>
+    <string name="status_bar_tint">Status Bar Tint</string>
+    <string name="nav_bar_tint">Navigation Bar Tint</string>
+    <string name="tint_transparent">Transparent</string>
+    <string name="tint_accent">Follow Accent Color</string>
+    <string name="theme_color">Theme Color</string>
+    <string name="amoled_black_mode">AMOLED Black Mode</string>
+    <string name="amoled_black_mode_desc">Pure black background, saves battery on OLED screens</string>
+    <string name="primary_color">Primary Color</string>
+    <string name="primary_color_desc">Change app primary color</string>
+    <string name="secondary_color">Secondary Color</string>
+    <string name="secondary_color_desc">Change app secondary color</string>
+    <string name="tertiary_color">Tertiary Color</string>
+    <string name="tertiary_color_desc">Change app tertiary color</string>
+    <string name="font_style">Font Style</string>
+
+    <string name="thumbnail_cache_size">Thumbnail Cache Size</string>
+    <string name="cache_size_mb">%d MB</string>
+    <string name="trash_deletion_warning">Trash Deletion Warning</string>
+    <string name="trash_deletion_warning_desc">Show reminder that trash is auto-deleted after 30 days</string>
+
+    <string name="use_default_photo_editor">Use Default Photo Editor</string>
+    <string name="selected_editor">Selected: %s</string>
+    <string name="use_default_video_editor">Use Default Video Editor</string>
+    <string name="auto_play_video">Auto-Play Video</string>
+    <string name="auto_play_video_desc">Automatically play video when opened</string>
+    <string name="default_mute_video">Default Mute Video</string>
+    <string name="default_mute_video_desc">Start videos muted by default</string>
+
+    <string name="version_author">Version 1.0 - By Tama</string>
+    <string name="restart_app_cache">Restart app to apply cache changes</string>
+    <string name="none_selected">None selected</string>
+    <string name="no_photo_editors_found">No photo editor apps found</string>
+    <string name="no_video_editors_found">No video editor apps found</string>
+
+    <!-- Dialogs -->
+    <string name="create_new_folder">Create New Folder</string>
+    <string name="folder_name">Folder Name</string>
+    <string name="create">Create</string>
+    <string name="select_folder">Select Folder</string>
+    <string name="add_custom_tag">Add Custom Tag</string>
+    <string name="tag_name">Tag Name</string>
+    <string name="suggestions">Suggestions:</string>
+    <string name="add">Add</string>
+    <string name="new_name">New name</string>
+
+    <!-- Detail Screen -->
+    <string name="share_title">Share Media</string>
+    <string name="edit_title">Edit Media</string>
+    <string name="use_as">Use as…</string>
+    <string name="details">Details</string>
+    <string name="name">Name</string>
+    <string name="date">Date</string>
+    <string name="path">Path</string>
+    <string name="resolution">Resolution</string>
+    <string name="duration">Duration</string>
+    <string name="size">Size</string>
+    <string name="camera_model">Camera Model</string>
+    <string name="exposure_info">Exposure Info</string>
+    <string name="location">Location</string>
+    <string name="mime_type">Mime Type</string>
+    <string name="uri">URI</string>
+    <string name="tags_hint">Tags (Click to search, X to remove)</string>
+    <string name="format_not_supported">Format is not supported by this device</string>
+    <string name="failed_to_play_video">Failed to play video</string>
+
+    <!-- Video Controls -->
+    <string name="rewind_10s">Rewind 10s</string>
+    <string name="forward_10s">Forward 10s</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="playback_speed">Playback Speed</string>
+    <string name="repeat_on">Repeat: On</string>
+    <string name="repeat_off">Repeat: Off</string>
+    <string name="mute">Mute</string>
+    <string name="unmute">Unmute</string>
+    <string name="full_screen">Full Screen</string>
+    <string name="exit_full_screen">Exit Full Screen</string>
+
+    <!-- Trash Screen -->
+    <string name="restore_selected">Restore Selected</string>
+    <string name="delete_permanently">Delete Permanently</string>
+    <string name="empty_trash">Empty Trash</string>
+    <string name="trash_warning_message">Items in trash will be automatically deleted after 30 days by the system.</string>
+    <string name="trash_empty_title">Trash is empty</string>
+    <string name="trash_empty_desc">Items in the trash will be permanently deleted after 30 days.</string>
+    <string name="permanently_delete_confirm">This item will be permanently deleted from your device. This action cannot be undone.</string>
+    <string name="permanently_delete_confirm_bulk">Are you sure you want to permanently delete these %d items? This action cannot be undone.</string>
+    <string name="empty_trash_confirm">Are you sure you want to permanently delete all %d items in the trash? This action cannot be undone.</string>
+    <string name="trash_options_desc">What would you like to do with \"%s\"?</string>
+
+    <!-- Rotation Modes -->
+    <string name="rotation_system">Follow System Setting</string>
+    <string name="rotation_device">Force Device Rotation (Sensor)</string>
+    <string name="rotation_aspect">Auto Aspect Ratio</string>
+
+    <!-- Sort Labels -->
+    <string name="sort_newest_label">Date: Newest First</string>
+    <string name="sort_oldest_label">Date: Oldest First</string>
+    <string name="sort_largest_label">Size: Largest First</string>
+    <string name="sort_smallest_label">Size: Smallest First</string>
+
+    <string name="hide">Hide</string>
+    <string name="unhide">Unhide</string>
+    <string name="hidden_albums">Hidden Albums</string>
+    <string name="manage_hidden_albums">Manage Hidden Albums</string>
+    <string name="manage_hidden_albums_desc">View and restore albums you have hidden</string>
+    <string name="quick_access">Quick Access</string>
+    <string name="configure_quick_access">Configure Quick Access</string>
+    <string name="configure_quick_access_desc">Choose which items appear in the quick access bar</string>
+    <string name="media_player">Media Player</string>
+    <string name="enable_video_preload">Pre-load Next Video</string>
+    <string name="enable_video_preload_desc">Ready the next video in the background for instant playback</string>
+    <string name="no_hidden_albums">No hidden albums</string>
 </resources>

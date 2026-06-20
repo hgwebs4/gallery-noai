@@ -36,33 +36,3 @@ val SunsetOrangeLightTertiary = Color(0xFF656031)
 val SunsetOrangeDarkPrimary = Color(0xFFFFB68E)
 val SunsetOrangeDarkSecondary = Color(0xFFE6BEAC)
 val SunsetOrangeDarkTertiary = Color(0xFFCFC899)
-
-// Pantone Basic Colors
-val PantoneYellow = Color(0xFFFEDD00)
-val PantoneOrange = Color(0xFFFE5000)
-val PantoneRed = Color(0xFFEF3340)
-val PantoneMagenta = Color(0xFFF2008B)
-val PantonePurple = Color(0xFFBB29BB)
-val PantoneViolet = Color(0xFF440099)
-val PantoneBlue = Color(0xFF0085CA)
-val PantoneGreen = Color(0xFF00AB84)
-val PantoneBlack = Color(0xFF2D2926)
-val PantoneGray = Color(0xFF75787B)
-
-val SelectableColors = listOf(
-    // Material 3 Defaults
-    Color(0xFF6650a4), // Purple40
-    Color(0xFF625b71), // PurpleGrey40
-    Color(0xFF7D5260), // Pink40
-    // Pantone Colors
-    PantoneYellow,
-    PantoneOrange,
-    PantoneRed,
-    PantoneMagenta,
-    PantonePurple,
-    PantoneViolet,
-    PantoneBlue,
-    PantoneGreen,
-    PantoneBlack,
-    PantoneGray
-)

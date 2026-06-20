@@ -1,0 +1,196 @@
+<resources>
+    <string name="app_name">gallery noai</string>
+    <string name="media_access_attribution_label">Akses Media</string>
+
+    <!-- General UI -->
+    <string name="back">Kembali</string>
+    <string name="cancel">Batal</string>
+    <string name="clear">Bersihkan</string>
+    <string name="clear_all">Hapus Semua</string>
+    <string name="delete">Hapus</string>
+    <string name="edit">Edit</string>
+    <string name="info">Info</string>
+    <string name="more">Lainnya</string>
+    <string name="options">Opsi</string>
+    <string name="remove">Hapus</string>
+    <string name="rename">Ganti Nama</string>
+    <string name="restore">Pulihkan</string>
+    <string name="search">Cari</string>
+    <string name="select">Pilih</string>
+    <string name="share">Bagikan</string>
+    <string name="ok">OKE</string>
+
+    <!-- Navigation -->
+    <string name="nav_photos">Foto</string>
+    <string name="nav_albums">Album</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_search">Cari</string>
+
+    <!-- Photos Screen -->
+    <string name="no_photos_found">Tidak ada foto atau video ditemukan</string>
+    <string name="selected_count">%d Terpilih</string>
+    <string name="clear_selection">Bersihkan Pilihan</string>
+    <string name="move_to_trash">Pindahkan ke Sampah</string>
+    <string name="select_all">Pilih Semua</string>
+    <string name="favorite">Favorit</string>
+    <string name="unfavorite">Bukan Favorit</string>
+    <string name="add_tag">Tambah Tag</string>
+    <string name="copy_to_folder">Salin ke folder</string>
+    <string name="move_to_folder">Pindahkan ke folder</string>
+    <string name="share_media">Bagikan media</string>
+
+    <!-- Sort Options -->
+    <string name="sort_date_newest">Tanggal (Terbaru)</string>
+    <string name="sort_date_oldest">Tanggal (Terlama)</string>
+    <string name="sort_size_largest">Ukuran (Terbesar)</string>
+    <string name="sort_size_smallest">Ukuran (Terkecil)</string>
+
+    <!-- Search Screen -->
+    <string name="search_placeholder">Cari foto, video, tag…</string>
+    <string name="no_results_found">Tidak ada hasil untuk \"%s\"</string>
+    <string name="recent_searches">Pencarian Terbaru</string>
+    <string name="your_tags">Tag Anda</string>
+    <string name="search_hint">Cari berdasarkan nama file atau tag.</string>
+    <string name="recent">Terbaru</string>
+
+    <!-- Albums Screen -->
+    <string name="no_albums_found">Tidak ada album ditemukan</string>
+    <string name="favorites">Favorit</string>
+    <string name="trash">Sampah</string>
+    <string name="videos">Video</string>
+    <string name="screenshots">Tangkapan Layar</string>
+    <string name="items_count">%1$d item</string>
+    <string name="items_with_size">%1$d item • %2$s</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_general">Umum</string>
+    <string name="settings_appearance">Tampilan</string>
+    <string name="settings_privacy_storage">Privasi &amp; Penyimpanan</string>
+    <string name="settings_editor">Pengaturan Editor</string>
+
+    <string name="default_sort_order">Urutan Sortir Default</string>
+    <string name="search_all_files">Cari Semua File</string>
+    <string name="search_all_files_desc">Cari secara rekursif di semua direktori perangkat</string>
+    <string name="date_format">Format Tanggal</string>
+    <string name="fullscreen_rotation_mode">Mode Rotasi Layar Penuh</string>
+
+    <string name="grid_columns">Kolom Grid</string>
+    <string name="grid_columns_count">%d kolom</string>
+    <string name="grid_padding">Jarak Grid (Padding)</string>
+    <string name="show_nav_labels">Tampilkan Label Navigasi</string>
+    <string name="show_nav_labels_desc">Tampilkan label teks di bilah navigasi bawah</string>
+    <string name="app_theme">Tema Aplikasi</string>
+    <string name="status_bar_tint">Warna Status Bar</string>
+    <string name="nav_bar_tint">Warna Navigation Bar</string>
+    <string name="tint_transparent">Transparan</string>
+    <string name="tint_accent">Ikuti Warna Aksen</string>
+    <string name="theme_color">Warna Tema</string>
+    <string name="amoled_black_mode">Mode Hitam AMOLED</string>
+    <string name="amoled_black_mode_desc">Latar belakang hitam murni, menghemat baterai pada layar OLED</string>
+    <string name="primary_color">Warna Utama</string>
+    <string name="primary_color_desc">Ubah warna utama aplikasi</string>
+    <string name="secondary_color">Warna Sekunder</string>
+    <string name="secondary_color_desc">Ubah warna sekunder aplikasi</string>
+    <string name="tertiary_color">Warna Tersier</string>
+    <string name="tertiary_color_desc">Ubah warna tersier aplikasi</string>
+    <string name="font_style">Gaya Font</string>
+
+    <string name="thumbnail_cache_size">Ukuran Cache Thumbnail</string>
+    <string name="cache_size_mb">%d MB</string>
+    <string name="trash_deletion_warning">Peringatan Penghapusan Sampah</string>
+    <string name="trash_deletion_warning_desc">Tampilkan pengingat bahwa sampah dihapus otomatis setelah 30 hari</string>
+
+    <string name="use_default_photo_editor">Gunakan Editor Foto Default</string>
+    <string name="selected_editor">Terpilih: %s</string>
+    <string name="use_default_video_editor">Gunakan Editor Video Default</string>
+    <string name="auto_play_video">Putar Otomatis Video</string>
+    <string name="auto_play_video_desc">Putar video secara otomatis saat dibuka</string>
+    <string name="default_mute_video">Video Tanpa Suara Secara Default</string>
+    <string name="default_mute_video_desc">Mulai video dalam keadaan tanpa suara</string>
+
+    <string name="version_author">Versi 1.0 - Oleh Tama</string>
+    <string name="restart_app_cache">Mulai ulang aplikasi untuk menerapkan perubahan cache</string>
+    <string name="none_selected">Tidak ada yang dipilih</string>
+    <string name="no_photo_editors_found">Aplikasi editor foto tidak ditemukan</string>
+    <string name="no_video_editors_found">Aplikasi editor video tidak ditemukan</string>
+
+    <!-- Dialogs -->
+    <string name="create_new_folder">Buat Folder Baru</string>
+    <string name="folder_name">Nama Folder</string>
+    <string name="create">Buat</string>
+    <string name="select_folder">Pilih Folder</string>
+    <string name="add_custom_tag">Tambah Tag Kustom</string>
+    <string name="tag_name">Nama Tag</string>
+    <string name="suggestions">Saran:</string>
+    <string name="add">Tambah</string>
+    <string name="new_name">Nama baru</string>
+
+    <!-- Detail Screen -->
+    <string name="share_title">Bagikan Media</string>
+    <string name="edit_title">Edit Media</string>
+    <string name="use_as">Gunakan sebagai…</string>
+    <string name="details">Detail</string>
+    <string name="name">Nama</string>
+    <string name="date">Tanggal</string>
+    <string name="path">Jalur</string>
+    <string name="resolution">Resolusi</string>
+    <string name="duration">Durasi</string>
+    <string name="size">Ukuran</string>
+    <string name="camera_model">Model Kamera</string>
+    <string name="exposure_info">Info Eksposur</string>
+    <string name="location">Lokasi</string>
+    <string name="mime_type">Tipe Mime</string>
+    <string name="uri">URI</string>
+    <string name="tags_hint">Tag (Klik untuk cari, X untuk hapus)</string>
+    <string name="format_not_supported">Format tidak didukung oleh perangkat ini</string>
+    <string name="failed_to_play_video">Gagal memutar video</string>
+
+    <!-- Video Controls -->
+    <string name="rewind_10s">Mundur 10 dtk</string>
+    <string name="forward_10s">Maju 10 dtk</string>
+    <string name="play">Putar</string>
+    <string name="pause">Jeda</string>
+    <string name="playback_speed">Kecepatan Putar</string>
+    <string name="repeat_on">Ulangi: Aktif</string>
+    <string name="repeat_off">Ulangi: Mati</string>
+    <string name="mute">Bisukan</string>
+    <string name="unmute">Aktifkan Suara</string>
+    <string name="full_screen">Layar Penuh</string>
+    <string name="exit_full_screen">Keluar Layar Penuh</string>
+
+    <!-- Trash Screen -->
+    <string name="restore_selected">Pulihkan Terpilih</string>
+    <string name="delete_permanently">Hapus Permanen</string>
+    <string name="empty_trash">Kosongkan Sampah</string>
+    <string name="trash_warning_message">Item di sampah akan dihapus secara otomatis setelah 30 hari oleh sistem.</string>
+    <string name="trash_empty_title">Sampah kosong</string>
+    <string name="trash_empty_desc">Item di sampah akan dihapus secara permanen setelah 30 hari.</string>
+    <string name="permanently_delete_confirm">Item ini akan dihapus secara permanen dari perangkat Anda. Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="permanently_delete_confirm_bulk">Apakah Anda yakin ingin menghapus %d item ini secara permanen? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="empty_trash_confirm">Apakah Anda yakin ingin menghapus permanen semua %d item di sampah? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="trash_options_desc">Apa yang ingin Anda lakukan dengan \"%s\"?</string>
+
+    <!-- Rotation Modes -->
+    <string name="rotation_system">Ikuti Pengaturan Sistem</string>
+    <string name="rotation_device">Paksa Rotasi Perangkat (Sensor)</string>
+    <string name="rotation_aspect">Rasio Aspek Otomatis</string>
+
+    <!-- Sort Labels -->
+    <string name="sort_newest_label">Tanggal: Terbaru Lebih Dulu</string>
+    <string name="sort_oldest_label">Tanggal: Terlama Lebih Dulu</string>
+    <string name="sort_largest_label">Ukuran: Terbesar Lebih Dulu</string>
+    <string name="sort_smallest_label">Ukuran: Terkecil Lebih Dulu</string>
+
+    <string name="hide">Sembunyikan</string>
+    <string name="unhide">Munculkan</string>
+    <string name="hidden_albums">Album Tersembunyi</string>
+    <string name="manage_hidden_albums">Kelola Album Tersembunyi</string>
+    <string name="manage_hidden_albums_desc">Lihat dan pulihkan album yang telah Anda sembunyikan</string>
+    <string name="quick_access">Akses Cepat</string>
+    <string name="configure_quick_access">Atur Akses Cepat</string>
+    <string name="configure_quick_access_desc">Pilih item mana yang muncul di bar akses cepat</string>
+    <string name="media_player">Media Player</string>
+    <string name="enable_video_preload">Pre-load Video Berikutnya</string>
+    <string name="enable_video_preload_desc">Siapkan video berikutnya di latar belakang untuk putar instan</string>
+    <string name="no_hidden_albums">Tidak ada album tersembunyi</string>
+</resources>

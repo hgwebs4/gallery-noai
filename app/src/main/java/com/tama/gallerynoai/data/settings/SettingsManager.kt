@@ -1,17 +1,16 @@
 package com.tama.gallerynoai.data.settings
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.core.content.edit
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -29,81 +28,94 @@ enum class FullscreenRotationMode {
     ASPECT_RATIO
 }
 
-class SettingsManager(private val context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("gallery_settings", Context.MODE_PRIVATE)
+@Singleton
+class SettingsManager @Inject constructor(@ApplicationContext private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    private val _themeMode = MutableStateFlow(prefs.getString(KEY_THEME_MODE, "System") ?: "System")
-    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+    val themeMode: StateFlow<String> = context.dataStore.data
+        .map { it[KEY_THEME_MODE] ?: "System" }
+        .stateIn(scope, SharingStarted.Eagerly, "System")
 
-    private val _accentColor = MutableStateFlow(prefs.getInt(KEY_ACCENT_COLOR, 0xFF6650a4.toInt()))
-    val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
+    val dateFormat: StateFlow<String> = context.dataStore.data
+        .map { it[KEY_DATE_FORMAT] ?: "dd/MM/yyyy" }
+        .stateIn(scope, SharingStarted.Eagerly, "dd/MM/yyyy")
 
-    private val _secondaryColor = MutableStateFlow(prefs.getInt(KEY_SECONDARY_COLOR, 0xFF625b71.toInt()))
-    val secondaryColor: StateFlow<Int> = _secondaryColor.asStateFlow()
+    val useDefaultEditor: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_USE_DEFAULT_EDITOR] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
-    private val _tertiaryColor = MutableStateFlow(prefs.getInt(KEY_TERTIARY_COLOR, 0xFF7D5260.toInt()))
-    val tertiaryColor: StateFlow<Int> = _tertiaryColor.asStateFlow()
+    val defaultEditorPackage: StateFlow<String?> = context.dataStore.data
+        .map { it[KEY_DEFAULT_EDITOR_PACKAGE] }
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
-    private val _dateFormat = MutableStateFlow(prefs.getString(KEY_DATE_FORMAT, "dd/MM/yyyy") ?: "dd/MM/yyyy")
-    val dateFormat: StateFlow<String> = _dateFormat.asStateFlow()
+    val useDefaultVideoEditor: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_USE_DEFAULT_VIDEO_EDITOR] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
-    private val _useDefaultEditor = MutableStateFlow(prefs.getBoolean(KEY_USE_DEFAULT_EDITOR, false))
-    val useDefaultEditor: StateFlow<Boolean> = _useDefaultEditor.asStateFlow()
+    val autoPlayVideo: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_AUTO_PLAY_VIDEO] ?: true }
+        .stateIn(scope, SharingStarted.Eagerly, true)
 
-    private val _defaultEditorPackage = MutableStateFlow(prefs.getString(KEY_DEFAULT_EDITOR_PACKAGE, null))
-    val defaultEditorPackage: StateFlow<String?> = _defaultEditorPackage.asStateFlow()
+    val defaultMuteVideo: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_DEFAULT_MUTE_VIDEO] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
-    private val _useDefaultVideoEditor = MutableStateFlow(prefs.getBoolean(KEY_USE_DEFAULT_VIDEO_EDITOR, false))
-    val useDefaultVideoEditor: StateFlow<Boolean> = _useDefaultVideoEditor.asStateFlow()
+    val defaultVideoEditorPackage: StateFlow<String?> = context.dataStore.data
+        .map { it[KEY_DEFAULT_VIDEO_EDITOR_PACKAGE] }
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
-    private val _autoPlayVideo = MutableStateFlow(prefs.getBoolean(KEY_AUTO_PLAY_VIDEO, true))
-    val autoPlayVideo: StateFlow<Boolean> = _autoPlayVideo.asStateFlow()
+    val enableVideoPreload: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_ENABLE_VIDEO_PRELOAD] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
-    private val _defaultMuteVideo = MutableStateFlow(prefs.getBoolean(KEY_DEFAULT_MUTE_VIDEO, false))
-    val defaultMuteVideo: StateFlow<Boolean> = _defaultMuteVideo.asStateFlow()
+    val hiddenAlbumIds: StateFlow<Set<String>> = context.dataStore.data
+        .map { it[KEY_HIDDEN_ALBUM_IDS] ?: emptySet() }
+        .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
-    private val _defaultVideoEditorPackage = MutableStateFlow(prefs.getString(KEY_DEFAULT_VIDEO_EDITOR_PACKAGE, null))
-    val defaultVideoEditorPackage: StateFlow<String?> = _defaultVideoEditorPackage.asStateFlow()
+    val quickAccessItems: StateFlow<Set<String>> = context.dataStore.data
+        .map { it[KEY_QUICK_ACCESS_ITEMS] ?: setOf("favorites", "trash", "videos", "screenshots") }
+        .stateIn(scope, SharingStarted.Eagerly, setOf("favorites", "trash", "videos", "screenshots"))
 
-    private val _searchAllFilesByDefault = MutableStateFlow(prefs.getBoolean(KEY_SEARCH_ALL_FILES_BY_DEFAULT, true))
-    val searchAllFilesByDefault: StateFlow<Boolean> = _searchAllFilesByDefault.asStateFlow()
+    val searchAllFilesByDefault: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_SEARCH_ALL_FILES_BY_DEFAULT] ?: true }
+        .stateIn(scope, SharingStarted.Eagerly, true)
 
-    private val _fontFamily = MutableStateFlow(prefs.getString(KEY_FONT_FAMILY, "Default") ?: "Default")
-    val fontFamily: StateFlow<String> = _fontFamily.asStateFlow()
+    val amoledMode: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_AMOLED_MODE] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
-    private val _amoledMode = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_MODE, false))
-    val amoledMode: StateFlow<Boolean> = _amoledMode.asStateFlow()
+    val gridColumns: StateFlow<Int> = context.dataStore.data
+        .map { it[KEY_GRID_COLUMNS] ?: 3 }
+        .stateIn(scope, SharingStarted.Eagerly, 3)
 
-    private val _gridColumns = MutableStateFlow(prefs.getInt(KEY_GRID_COLUMNS, 3))
-    val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
+    val fullscreenRotationMode: StateFlow<FullscreenRotationMode> = context.dataStore.data
+        .map { 
+            try {
+                FullscreenRotationMode.valueOf(it[KEY_FULLSCREEN_ROTATION_MODE] ?: FullscreenRotationMode.SYSTEM_SETTING.name)
+            } catch (e: Exception) {
+                FullscreenRotationMode.SYSTEM_SETTING
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, FullscreenRotationMode.SYSTEM_SETTING)
 
-    private val _fullscreenRotationMode = MutableStateFlow(
-        try {
-            FullscreenRotationMode.valueOf(prefs.getString(KEY_FULLSCREEN_ROTATION_MODE, FullscreenRotationMode.SYSTEM_SETTING.name) ?: FullscreenRotationMode.SYSTEM_SETTING.name)
-        } catch (e: Exception) {
-            FullscreenRotationMode.SYSTEM_SETTING
-        }
-    )
-    val fullscreenRotationMode: StateFlow<FullscreenRotationMode> = _fullscreenRotationMode.asStateFlow()
+    val diskCacheMb: StateFlow<Int> = context.dataStore.data
+        .map { it[KEY_DISK_CACHE_MB] ?: 512 }
+        .stateIn(scope, SharingStarted.Eagerly, 512)
 
-    private val _diskCacheMb = MutableStateFlow(prefs.getInt(KEY_DISK_CACHE_MB, 512))
-    val diskCacheMb: StateFlow<Int> = _diskCacheMb.asStateFlow()
+    val showNavLabel: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_SHOW_NAV_LABEL] ?: true }
+        .stateIn(scope, SharingStarted.Eagerly, true)
 
-    private val _showNavLabel = MutableStateFlow(prefs.getBoolean(KEY_SHOW_NAV_LABEL, true))
-    val showNavLabel: StateFlow<Boolean> = _showNavLabel.asStateFlow()
+    val defaultSort: StateFlow<String> = context.dataStore.data
+        .map { it[KEY_DEFAULT_SORT] ?: "DATE_NEWEST" }
+        .stateIn(scope, SharingStarted.Eagerly, "DATE_NEWEST")
 
-    private val _defaultSort = MutableStateFlow(prefs.getString(KEY_DEFAULT_SORT, "DATE_NEWEST") ?: "DATE_NEWEST")
-    val defaultSort: StateFlow<String> = _defaultSort.asStateFlow()
+    val trashWarningEnabled: StateFlow<Boolean> = context.dataStore.data
+        .map { it[KEY_TRASH_WARNING] ?: true }
+        .stateIn(scope, SharingStarted.Eagerly, true)
 
-    private val _trashWarningEnabled = MutableStateFlow(prefs.getBoolean(KEY_TRASH_WARNING, true))
-    val trashWarningEnabled: StateFlow<Boolean> = _trashWarningEnabled.asStateFlow()
-
-    // Color Theme using DataStore
-    private val themeColorKey = stringPreferencesKey("theme_color")
     val themeColor: StateFlow<AppThemeColor> = context.dataStore.data
         .map { preferences ->
-            val colorName = preferences[themeColorKey] ?: AppThemeColor.DEFAULT.name
+            val colorName = preferences[KEY_THEME_COLOR_NAME] ?: AppThemeColor.DEFAULT.name
             try {
                 AppThemeColor.valueOf(colorName)
             } catch (e: Exception) {
@@ -113,132 +125,163 @@ class SettingsManager(private val context: Context) {
 
     fun setThemeColor(color: AppThemeColor) {
         scope.launch {
-            context.dataStore.edit { preferences ->
-                preferences[themeColorKey] = color.name
-            }
+            context.dataStore.edit { it[KEY_THEME_COLOR_NAME] = color.name }
         }
     }
 
     fun setThemeMode(mode: String) {
-        prefs.edit { putString(KEY_THEME_MODE, mode) }
-        _themeMode.value = mode
-    }
-
-    fun setAccentColor(color: Int) {
-        prefs.edit { putInt(KEY_ACCENT_COLOR, color) }
-        _accentColor.value = color
-    }
-
-    fun setSecondaryColor(color: Int) {
-        prefs.edit { putInt(KEY_SECONDARY_COLOR, color) }
-        _secondaryColor.value = color
-    }
-
-    fun setTertiaryColor(color: Int) {
-        prefs.edit { putInt(KEY_TERTIARY_COLOR, color) }
-        _tertiaryColor.value = color
+        scope.launch {
+            context.dataStore.edit { it[KEY_THEME_MODE] = mode }
+        }
     }
 
     fun setDateFormat(format: String) {
-        prefs.edit { putString(KEY_DATE_FORMAT, format) }
-        _dateFormat.value = format
+        scope.launch {
+            context.dataStore.edit { it[KEY_DATE_FORMAT] = format }
+        }
     }
 
     fun setUseDefaultEditor(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_USE_DEFAULT_EDITOR, enabled) }
-        _useDefaultEditor.value = enabled
+        scope.launch {
+            context.dataStore.edit { it[KEY_USE_DEFAULT_EDITOR] = enabled }
+        }
     }
 
     fun setDefaultEditorPackage(packageName: String?) {
-        prefs.edit { putString(KEY_DEFAULT_EDITOR_PACKAGE, packageName) }
-        _defaultEditorPackage.value = packageName
+        scope.launch {
+            context.dataStore.edit { 
+                if (packageName == null) it.remove(KEY_DEFAULT_EDITOR_PACKAGE)
+                else it[KEY_DEFAULT_EDITOR_PACKAGE] = packageName
+            }
+        }
     }
 
     fun setUseDefaultVideoEditor(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_USE_DEFAULT_VIDEO_EDITOR, enabled) }
-        _useDefaultVideoEditor.value = enabled
+        scope.launch {
+            context.dataStore.edit { it[KEY_USE_DEFAULT_VIDEO_EDITOR] = enabled }
+        }
     }
 
     fun setAutoPlayVideo(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AUTO_PLAY_VIDEO, enabled) }
-        _autoPlayVideo.value = enabled
+        scope.launch {
+            context.dataStore.edit { it[KEY_AUTO_PLAY_VIDEO] = enabled }
+        }
     }
 
     fun setDefaultMuteVideo(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_DEFAULT_MUTE_VIDEO, enabled) }
-        _defaultMuteVideo.value = enabled
+        scope.launch {
+            context.dataStore.edit { it[KEY_DEFAULT_MUTE_VIDEO] = enabled }
+        }
     }
 
     fun setDefaultVideoEditorPackage(packageName: String?) {
-        prefs.edit { putString(KEY_DEFAULT_VIDEO_EDITOR_PACKAGE, packageName) }
-        _defaultVideoEditorPackage.value = packageName
+        scope.launch {
+            context.dataStore.edit { 
+                if (packageName == null) it.remove(KEY_DEFAULT_VIDEO_EDITOR_PACKAGE)
+                else it[KEY_DEFAULT_VIDEO_EDITOR_PACKAGE] = packageName
+            }
+        }
+    }
+
+    fun setEnableVideoPreload(enabled: Boolean) {
+        scope.launch {
+            context.dataStore.edit { it[KEY_ENABLE_VIDEO_PRELOAD] = enabled }
+        }
+    }
+
+    fun setHiddenAlbumIds(ids: Set<String>) {
+        scope.launch {
+            context.dataStore.edit { it[KEY_HIDDEN_ALBUM_IDS] = ids }
+        }
+    }
+
+    fun toggleAlbumHidden(id: String) {
+        scope.launch {
+            context.dataStore.edit { prefs ->
+                val current = prefs[KEY_HIDDEN_ALBUM_IDS] ?: emptySet()
+                if (current.contains(id)) {
+                    prefs[KEY_HIDDEN_ALBUM_IDS] = current - id
+                } else {
+                    prefs[KEY_HIDDEN_ALBUM_IDS] = current + id
+                }
+            }
+        }
+    }
+
+    fun setQuickAccessItems(items: Set<String>) {
+        scope.launch {
+            context.dataStore.edit { it[KEY_QUICK_ACCESS_ITEMS] = items }
+        }
     }
 
     fun setSearchAllFilesByDefault(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_SEARCH_ALL_FILES_BY_DEFAULT, enabled) }
-        _searchAllFilesByDefault.value = enabled
-    }
-
-    fun setFontFamily(fontFamily: String) {
-        prefs.edit { putString(KEY_FONT_FAMILY, fontFamily) }
-        _fontFamily.value = fontFamily
+        scope.launch {
+            context.dataStore.edit { it[KEY_SEARCH_ALL_FILES_BY_DEFAULT] = enabled }
+        }
     }
 
     fun setAmoledMode(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AMOLED_MODE, enabled) }
-        _amoledMode.value = enabled
+        scope.launch {
+            context.dataStore.edit { it[KEY_AMOLED_MODE] = enabled }
+        }
     }
 
     fun setGridColumns(columns: Int) {
-        prefs.edit { putInt(KEY_GRID_COLUMNS, columns) }
-        _gridColumns.value = columns
+        scope.launch {
+            context.dataStore.edit { it[KEY_GRID_COLUMNS] = columns }
+        }
     }
 
     fun setFullscreenRotationMode(mode: FullscreenRotationMode) {
-        prefs.edit { putString(KEY_FULLSCREEN_ROTATION_MODE, mode.name) }
-        _fullscreenRotationMode.value = mode
+        scope.launch {
+            context.dataStore.edit { it[KEY_FULLSCREEN_ROTATION_MODE] = mode.name }
+        }
     }
 
     fun setDiskCacheMb(mb: Int) {
-        prefs.edit { putInt(KEY_DISK_CACHE_MB, mb) }
-        _diskCacheMb.value = mb
+        scope.launch {
+            context.dataStore.edit { it[KEY_DISK_CACHE_MB] = mb }
+        }
     }
 
     fun setShowNavLabel(show: Boolean) {
-        prefs.edit { putBoolean(KEY_SHOW_NAV_LABEL, show) }
-        _showNavLabel.value = show
+        scope.launch {
+            context.dataStore.edit { it[KEY_SHOW_NAV_LABEL] = show }
+        }
     }
 
     fun setDefaultSort(sort: String) {
-        prefs.edit { putString(KEY_DEFAULT_SORT, sort) }
-        _defaultSort.value = sort
+        scope.launch {
+            context.dataStore.edit { it[KEY_DEFAULT_SORT] = sort }
+        }
     }
 
     fun setTrashWarningEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_TRASH_WARNING, enabled) }
-        _trashWarningEnabled.value = enabled
+        scope.launch {
+            context.dataStore.edit { it[KEY_TRASH_WARNING] = enabled }
+        }
     }
 
     companion object {
-        private const val KEY_THEME_MODE = "theme_mode"
-        private const val KEY_ACCENT_COLOR = "accent_color"
-        private const val KEY_SECONDARY_COLOR = "secondary_color"
-        private const val KEY_TERTIARY_COLOR = "tertiary_color"
-        private const val KEY_DATE_FORMAT = "date_format"
-        private const val KEY_USE_DEFAULT_EDITOR = "use_default_editor"
-        private const val KEY_DEFAULT_EDITOR_PACKAGE = "default_editor_package"
-        private const val KEY_USE_DEFAULT_VIDEO_EDITOR = "use_default_video_editor"
-        private const val KEY_AUTO_PLAY_VIDEO = "auto_play_video"
-        private const val KEY_DEFAULT_MUTE_VIDEO = "default_mute_video"
-        private const val KEY_DEFAULT_VIDEO_EDITOR_PACKAGE = "default_video_editor_package"
-        private const val KEY_SEARCH_ALL_FILES_BY_DEFAULT = "search_all_files_by_default"
-        private const val KEY_FONT_FAMILY = "font_family"
-        private const val KEY_AMOLED_MODE = "amoled_mode"
-        private const val KEY_GRID_COLUMNS = "grid_columns"
-        private const val KEY_FULLSCREEN_ROTATION_MODE = "fullscreen_rotation_mode"
-        private const val KEY_DISK_CACHE_MB = "disk_cache_mb"
-        private const val KEY_SHOW_NAV_LABEL = "show_nav_label"
-        private const val KEY_DEFAULT_SORT = "default_sort"
-        private const val KEY_TRASH_WARNING = "trash_warning_enabled"
+        val KEY_DISK_CACHE_MB = intPreferencesKey("disk_cache_mb")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_DATE_FORMAT = stringPreferencesKey("date_format")
+        private val KEY_USE_DEFAULT_EDITOR = booleanPreferencesKey("use_default_editor")
+        private val KEY_DEFAULT_EDITOR_PACKAGE = stringPreferencesKey("default_editor_package")
+        private val KEY_USE_DEFAULT_VIDEO_EDITOR = booleanPreferencesKey("use_default_video_editor")
+        private val KEY_AUTO_PLAY_VIDEO = booleanPreferencesKey("auto_play_video")
+        private val KEY_DEFAULT_MUTE_VIDEO = booleanPreferencesKey("default_mute_video")
+        private val KEY_DEFAULT_VIDEO_EDITOR_PACKAGE = stringPreferencesKey("default_video_editor_package")
+        private val KEY_ENABLE_VIDEO_PRELOAD = booleanPreferencesKey("enable_video_preload")
+        private val KEY_HIDDEN_ALBUM_IDS = stringSetPreferencesKey("hidden_album_ids")
+        private val KEY_QUICK_ACCESS_ITEMS = stringSetPreferencesKey("quick_access_items")
+        private val KEY_SEARCH_ALL_FILES_BY_DEFAULT = booleanPreferencesKey("search_all_files_by_default")
+        private val KEY_AMOLED_MODE = booleanPreferencesKey("amoled_mode")
+        private val KEY_GRID_COLUMNS = intPreferencesKey("grid_columns")
+        private val KEY_FULLSCREEN_ROTATION_MODE = stringPreferencesKey("fullscreen_rotation_mode")
+        private val KEY_SHOW_NAV_LABEL = booleanPreferencesKey("show_nav_label")
+        private val KEY_DEFAULT_SORT = stringPreferencesKey("default_sort")
+        private val KEY_TRASH_WARNING = booleanPreferencesKey("trash_warning_enabled")
+        private val KEY_THEME_COLOR_NAME = stringPreferencesKey("theme_color")
     }
 }

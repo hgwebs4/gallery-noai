@@ -54,8 +54,19 @@ class MediaSearchProvider {
         MediaType.IMAGES -> !item.isVideo
         MediaType.VIDEOS -> item.isVideo
         MediaType.GIFS -> item.mimeType == "image/gif"
-        MediaType.RAW -> item.mimeType.startsWith("image/x-") || item.mimeType == "image/vnd.adobe.photoshop"
-        MediaType.SVGS -> item.mimeType == "image/svg+xml"
+        MediaType.RAW -> {
+            val mime = item.mimeType.lowercase()
+            mime.startsWith("image/x-") || 
+            mime == "image/vnd.adobe.photoshop" ||
+            mime == "image/heic" ||
+            mime == "image/heif" ||
+            mime == "image/tiff" ||
+            item.name.lowercase().let { 
+                it.endsWith(".dng") || it.endsWith(".cr2") || it.endsWith(".nef") || 
+                it.endsWith(".arw") || it.endsWith(".orf") || it.endsWith(".raf")
+            }
+        }
+        MediaType.SVGS -> item.mimeType == "image/svg+xml" || item.name.lowercase().endsWith(".svg")
         MediaType.PORTRAITS -> false // AI based detecting portraits is removed, maybe we can use some metadata later if available
     }
 
@@ -63,6 +74,17 @@ class MediaSearchProvider {
         var score = 0
         for (term in terms) {
             var termScore = 0
+            
+            // Special Keyword Handling for Media Types
+            val isVideoKeyword = term == "video" || term == "videos"
+            val isImageKeyword = term == "image" || term == "images"
+            
+            if (isVideoKeyword && item.isVideo) {
+                termScore += 80
+            } else if (isImageKeyword && !item.isVideo) {
+                termScore += 80
+            }
+
             if (item.name.contains(term, ignoreCase = true)) termScore += 100
             if (item.customTags.any { it.contains(term, ignoreCase = true) }) termScore += 90
             if (item.relativePath?.contains(term, ignoreCase = true) == true) termScore += 50

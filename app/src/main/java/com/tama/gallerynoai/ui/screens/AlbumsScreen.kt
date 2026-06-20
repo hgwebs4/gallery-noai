@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +29,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.model.AlbumItem
 import com.tama.gallerynoai.ui.components.SelectionTopAppBar
 import com.tama.gallerynoai.ui.components.bouncyClick
@@ -58,6 +61,12 @@ fun AlbumsScreen(
     val hasLoadedOnce by viewModel.hasLoadedOnce.collectAsState()
     val albumSelectionMode by viewModel.albumSelectionMode.collectAsState()
     val selectedAlbumIds by viewModel.selectedAlbumIds.collectAsState()
+    val hiddenAlbumIds by viewModel.hiddenAlbumIds.collectAsState()
+    val quickAccessItems by viewModel.quickAccessItems.collectAsState()
+    
+    val filteredAlbums = remember(albums, hiddenAlbumIds) {
+        albums.filter { it.id !in hiddenAlbumIds }
+    }
     
     val gridState = rememberLazyGridState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -85,13 +94,17 @@ fun AlbumsScreen(
                     onDelete = {
                         viewModel.deleteAlbums(selectedAlbumIds)?.let { onDeleteRequest(it) }
                     },
+                    onHide = {
+                        selectedAlbumIds.forEach { viewModel.toggleAlbumHidden(it) }
+                        viewModel.setAlbumSelectionMode(false)
+                    },
                     scrollBehavior = selectionScrollBehavior
                 )
             } else {
                 TopAppBar(
                     title = { 
                         Text(
-                            "Albums", 
+                            stringResource(R.string.nav_albums), 
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.headlineMedium
                         ) 
@@ -110,9 +123,9 @@ fun AlbumsScreen(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else if (albums.isEmpty() && hasLoadedOnce) {
+        } else if (filteredAlbums.isEmpty() && hasLoadedOnce) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No albums found")
+                Text(stringResource(R.string.no_albums_found))
             }
         } else {
             LazyVerticalGrid(
@@ -125,18 +138,19 @@ fun AlbumsScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (!albumSelectionMode) {
+                if (!albumSelectionMode && quickAccessItems.isNotEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                         QuickAccessSection(
                             onFavoritesClick = onFavoritesClick,
                             onVideosClick = onVideosClick,
                             onScreenshotsClick = onScreenshotsClick,
-                            onTrashClick = onTrashClick
+                            onTrashClick = onTrashClick,
+                            visibleItems = quickAccessItems
                         )
                     }
                 }
 
-                items(albums) { album ->
+                items(filteredAlbums, key = { it.id }) { album ->
                     AlbumGridItem(
                         album = album,
                         isSelected = selectedAlbumIds.contains(album.id),
@@ -163,47 +177,66 @@ fun QuickAccessSection(
     onFavoritesClick: () -> Unit,
     onVideosClick: () -> Unit,
     onScreenshotsClick: () -> Unit,
-    onTrashClick: () -> Unit
+    onTrashClick: () -> Unit,
+    visibleItems: Set<String>
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            QuickAccessButton(
-                icon = Icons.Default.FavoriteBorder,
-                label = "Favorites",
-                onClick = onFavoritesClick,
-                modifier = Modifier.weight(1f)
-            )
-            QuickAccessButton(
-                icon = Icons.Default.DeleteOutline,
-                label = "Trash",
-                onClick = onTrashClick,
-                modifier = Modifier.weight(1f)
-            )
+        val rows = mutableListOf<List<@Composable () -> Unit>>()
+        val currentItems = mutableListOf<@Composable () -> Unit>()
+
+        if (visibleItems.contains("favorites")) {
+            currentItems.add {
+                QuickAccessButton(
+                    icon = Icons.Default.FavoriteBorder,
+                    label = stringResource(R.string.favorites),
+                    onClick = onFavoritesClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            QuickAccessButton(
-                icon = Icons.Default.Videocam,
-                label = "Videos",
-                onClick = onVideosClick,
-                modifier = Modifier.weight(1f)
-            )
-            QuickAccessButton(
-                icon = Icons.Default.Screenshot,
-                label = "Screenshots",
-                onClick = onScreenshotsClick,
-                modifier = Modifier.weight(1f)
-            )
+        if (visibleItems.contains("trash")) {
+            currentItems.add {
+                QuickAccessButton(
+                    icon = Icons.Default.DeleteOutline,
+                    label = stringResource(R.string.trash),
+                    onClick = onTrashClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        if (visibleItems.contains("videos")) {
+            currentItems.add {
+                QuickAccessButton(
+                    icon = Icons.Default.Videocam,
+                    label = stringResource(R.string.videos),
+                    onClick = onVideosClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        if (visibleItems.contains("screenshots")) {
+            currentItems.add {
+                QuickAccessButton(
+                    icon = Icons.Default.Screenshot,
+                    label = stringResource(R.string.screenshots),
+                    onClick = onScreenshotsClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        currentItems.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { item -> item() }
+                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
         }
     }
 }
@@ -308,11 +341,31 @@ fun AlbumGridItem(
         Spacer(modifier = Modifier.height(2.dp))
         val formattedSize = android.text.format.Formatter.formatFileSize(LocalContext.current, album.totalSize)
         Text(
-            text = "${album.itemCount} items • $formattedSize",
+            text = stringResource(R.string.items_with_size, album.itemCount, formattedSize),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun AlbumGridItemPreview() {
+    MaterialTheme {
+        Box(modifier = Modifier.padding(16.dp).width(160.dp)) {
+            AlbumGridItem(
+                album = AlbumItem(
+                    id = "1",
+                    name = "Camera",
+                    coverUri = android.net.Uri.EMPTY,
+                    itemCount = 124,
+                    totalSize = 1024 * 1024 * 500,
+                    relativePath = "DCIM/Camera"
+                ),
+                onClick = {}
+            )
+        }
     }
 }

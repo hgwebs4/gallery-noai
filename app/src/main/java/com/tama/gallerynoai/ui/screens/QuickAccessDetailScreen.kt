@@ -2,6 +2,8 @@ package com.tama.gallerynoai.ui.screens
 
 import android.content.IntentSender
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.model.MediaItem
 import com.tama.gallerynoai.data.model.SortType
 import com.tama.gallerynoai.ui.viewmodel.GalleryViewModel
@@ -23,6 +25,7 @@ fun QuickAccessDetailScreen(
     val mediaItems by viewModel.mediaItems.collectAsState()
     val sortType by viewModel.sortType.collectAsState()
     val gridColumns by viewModel.gridColumns.collectAsState()
+    val gridPadding = 1
     
     var filteredMedia by remember { mutableStateOf(emptyList<MediaItem>()) }
 
@@ -47,9 +50,9 @@ fun QuickAccessDetailScreen(
     }
 
     val title = when (type) {
-        QuickAccessType.FAVORITES -> "Favorites"
-        QuickAccessType.VIDEOS -> "Videos"
-        QuickAccessType.SCREENSHOTS -> "Screenshots"
+        QuickAccessType.FAVORITES -> stringResource(R.string.favorites)
+        QuickAccessType.VIDEOS -> stringResource(R.string.videos)
+        QuickAccessType.SCREENSHOTS -> stringResource(R.string.screenshots)
     }
     
     MediaGridScreen(
@@ -59,6 +62,7 @@ fun QuickAccessDetailScreen(
         onMediaClick = onMediaClick,
         onBackClick = onBackClick,
         onDeleteRequest = onDeleteRequest,
-        gridColumns = gridColumns
+        gridColumns = gridColumns,
+        gridPadding = gridPadding
     )
 }

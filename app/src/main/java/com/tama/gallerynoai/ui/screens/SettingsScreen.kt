@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,9 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.settings.AppThemeColor
 import com.tama.gallerynoai.data.settings.FullscreenRotationMode
-import com.tama.gallerynoai.ui.theme.SelectableColors
 import com.tama.gallerynoai.ui.viewmodel.SettingsViewModel
 
 data class EditorApp(
@@ -71,7 +71,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val defaultMuteVideo by viewModel.defaultMuteVideo.collectAsStateWithLifecycle()
     val defaultVideoEditorPackage by viewModel.defaultVideoEditorPackage.collectAsStateWithLifecycle()
     val searchAllFilesByDefault by viewModel.searchAllFilesByDefault.collectAsStateWithLifecycle()
-    val fontFamily by viewModel.fontFamily.collectAsStateWithLifecycle()
     val amoledMode by viewModel.amoledMode.collectAsStateWithLifecycle()
     val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
     val fullscreenRotationMode by viewModel.fullscreenRotationMode.collectAsStateWithLifecycle()
@@ -80,9 +79,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val defaultSort by viewModel.defaultSort.collectAsStateWithLifecycle()
     val trashWarningEnabled by viewModel.trashWarningEnabled.collectAsStateWithLifecycle()
     val themeColor by viewModel.themeColor.collectAsStateWithLifecycle()
-    val accentColorInt by viewModel.accentColor.collectAsStateWithLifecycle()
-    val secondaryColorInt by viewModel.secondaryColor.collectAsStateWithLifecycle()
-    val tertiaryColorInt by viewModel.tertiaryColor.collectAsStateWithLifecycle()
+    val hiddenAlbumIds by viewModel.hiddenAlbumIds.collectAsStateWithLifecycle()
+    val quickAccessItems by viewModel.quickAccessItems.collectAsStateWithLifecycle()
+    val enableVideoPreload by viewModel.enableVideoPreload.collectAsStateWithLifecycle()
 
     val scrollState = rememberScrollState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -91,17 +90,15 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showThemeColorDialog by remember { mutableStateOf(false) }
-    var showAccentColorDialog by remember { mutableStateOf(false) }
-    var showSecondaryColorDialog by remember { mutableStateOf(false) }
-    var showTertiaryColorDialog by remember { mutableStateOf(false) }
     var showDateFormatDialog by remember { mutableStateOf(false) }
-    var showFontDialog by remember { mutableStateOf(false) }
     var showGridColumnsDialog by remember { mutableStateOf(false) }
     var showRotationModeDialog by remember { mutableStateOf(false) }
     var showDiskCacheDialog by remember { mutableStateOf(false) }
     var showDefaultSortDialog by remember { mutableStateOf(false) }
     var showEditorDialog by remember { mutableStateOf(false) }
     var showVideoEditorDialog by remember { mutableStateOf(false) }
+    var showHiddenAlbumsDialog by remember { mutableStateOf(false) }
+    var showQuickAccessDialog by remember { mutableStateOf(false) }
     var availableEditors by remember { mutableStateOf<List<EditorApp>>(emptyList()) }
     var availableVideoEditors by remember { mutableStateOf<List<EditorApp>>(emptyList()) }
 
@@ -143,7 +140,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Settings",
+                        text = stringResource(R.string.nav_settings),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.headlineMedium
                     )
@@ -163,16 +160,28 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
-            SettingsSectionHeader("General")
+            SettingsSectionHeader(stringResource(R.string.settings_general))
+            ListItem(
+                modifier = Modifier.clickable { showHiddenAlbumsDialog = true },
+                headlineContent = { Text(stringResource(R.string.manage_hidden_albums)) },
+                supportingContent = { Text(stringResource(R.string.manage_hidden_albums_desc)) },
+                leadingContent = { Icon(Icons.Default.VisibilityOff, contentDescription = null) }
+            )
+            ListItem(
+                modifier = Modifier.clickable { showQuickAccessDialog = true },
+                headlineContent = { Text(stringResource(R.string.configure_quick_access)) },
+                supportingContent = { Text(stringResource(R.string.configure_quick_access_desc)) },
+                leadingContent = { Icon(Icons.Default.Speed, contentDescription = null) }
+            )
             ListItem(
                 modifier = Modifier.clickable { showDefaultSortDialog = true },
-                headlineContent = { Text("Default Sort Order") },
+                headlineContent = { Text(stringResource(R.string.default_sort_order)) },
                 supportingContent = {
                     val label = when (defaultSort) {
-                        "DATE_NEWEST" -> "Date: Newest First"
-                        "DATE_OLDEST" -> "Date: Oldest First"
-                        "SIZE_LARGEST" -> "Size: Largest First"
-                        "SIZE_SMALLEST" -> "Size: Smallest First"
+                        "DATE_NEWEST" -> stringResource(R.string.sort_newest_label)
+                        "DATE_OLDEST" -> stringResource(R.string.sort_oldest_label)
+                        "SIZE_LARGEST" -> stringResource(R.string.sort_largest_label)
+                        "SIZE_SMALLEST" -> stringResource(R.string.sort_smallest_label)
                         else -> defaultSort
                     }
                     Text(label)
@@ -180,8 +189,8 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
             )
             ListItem(
-                headlineContent = { Text("Search All Files") },
-                supportingContent = { Text("Search recursively across all device directories") },
+                headlineContent = { Text(stringResource(R.string.search_all_files)) },
+                supportingContent = { Text(stringResource(R.string.search_all_files_desc)) },
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.ManageSearch, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -193,18 +202,18 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
             ListItem(
                 modifier = Modifier.clickable { showDateFormatDialog = true },
-                headlineContent = { Text("Date Format") },
+                headlineContent = { Text(stringResource(R.string.date_format)) },
                 supportingContent = { Text(dateFormat) },
                 leadingContent = { Icon(Icons.Default.CalendarToday, contentDescription = null) }
             )
             ListItem(
                 modifier = Modifier.clickable { showRotationModeDialog = true },
-                headlineContent = { Text("Fullscreen Rotation Mode") },
+                headlineContent = { Text(stringResource(R.string.fullscreen_rotation_mode)) },
                 supportingContent = {
                     val label = when (fullscreenRotationMode) {
-                        FullscreenRotationMode.SYSTEM_SETTING -> "Follow System Setting"
-                        FullscreenRotationMode.DEVICE_ROTATION -> "Force Device Rotation (Sensor)"
-                        FullscreenRotationMode.ASPECT_RATIO -> "Auto Aspect Ratio"
+                        FullscreenRotationMode.SYSTEM_SETTING -> stringResource(R.string.rotation_system)
+                        FullscreenRotationMode.DEVICE_ROTATION -> stringResource(R.string.rotation_device)
+                        FullscreenRotationMode.ASPECT_RATIO -> stringResource(R.string.rotation_aspect)
                     }
                     Text(label)
                 },
@@ -212,16 +221,16 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SettingsSectionHeader("Appearance")
+            SettingsSectionHeader(stringResource(R.string.settings_appearance))
             ListItem(
                 modifier = Modifier.clickable { showGridColumnsDialog = true },
-                headlineContent = { Text("Grid Columns") },
-                supportingContent = { Text("$gridColumns columns") },
+                headlineContent = { Text(stringResource(R.string.grid_columns)) },
+                supportingContent = { Text(stringResource(R.string.grid_columns_count, gridColumns)) },
                 leadingContent = { Icon(Icons.Default.GridView, contentDescription = null) }
             )
             ListItem(
-                headlineContent = { Text("Show Navigation Labels") },
-                supportingContent = { Text("Show text labels in the bottom navigation bar") },
+                headlineContent = { Text(stringResource(R.string.show_nav_labels)) },
+                supportingContent = { Text(stringResource(R.string.show_nav_labels_desc)) },
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -232,19 +241,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             )
             ListItem(
                 modifier = Modifier.clickable { showThemeDialog = true },
-                headlineContent = { Text("App Theme") },
+                headlineContent = { Text(stringResource(R.string.app_theme)) },
                 supportingContent = { Text(themeMode) },
                 leadingContent = { Icon(Icons.Default.Brightness4, contentDescription = null) }
             )
             ListItem(
-                modifier = Modifier.clickable { showThemeColorDialog = true },
-                headlineContent = { Text("Theme Color") },
-                supportingContent = { Text(themeColor.name.replace("_", " ").lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }) },
-                leadingContent = { Icon(Icons.Default.Palette, contentDescription = null) }
-            )
-            ListItem(
-                headlineContent = { Text("AMOLED Black Mode") },
-                supportingContent = { Text("Pure black background, saves battery on OLED screens") },
+                headlineContent = { Text(stringResource(R.string.amoled_black_mode)) },
+                supportingContent = { Text(stringResource(R.string.amoled_black_mode_desc)) },
                 leadingContent = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -255,71 +258,23 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
             )
             ListItem(
-                modifier = Modifier.clickable { showAccentColorDialog = true },
-                headlineContent = { Text("Primary Color") },
-                supportingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(Color(accentColorInt), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Change app primary color")
-                    }
-                },
-                leadingContent = { Icon(Icons.Default.ColorLens, contentDescription = null) }
-            )
-            ListItem(
-                modifier = Modifier.clickable { showSecondaryColorDialog = true },
-                headlineContent = { Text("Secondary Color") },
-                supportingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(Color(secondaryColorInt), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Change app secondary color")
-                    }
-                },
-                leadingContent = { Icon(Icons.Default.FormatColorFill, contentDescription = null) }
-            )
-            ListItem(
-                modifier = Modifier.clickable { showTertiaryColorDialog = true },
-                headlineContent = { Text("Tertiary Color") },
-                supportingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(Color(tertiaryColorInt), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Change app tertiary color")
-                    }
-                },
-                leadingContent = { Icon(Icons.Default.Colorize, contentDescription = null) }
-            )
-            ListItem(
-                modifier = Modifier.clickable { showFontDialog = true },
-                headlineContent = { Text("Font Style") },
-                supportingContent = { Text(fontFamily) },
-                leadingContent = { Icon(Icons.Default.TextFields, contentDescription = null) }
+                modifier = Modifier.clickable { showThemeColorDialog = true },
+                headlineContent = { Text(stringResource(R.string.theme_color)) },
+                supportingContent = { Text(themeColor.name.replace("_", " ").lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }) },
+                leadingContent = { Icon(Icons.Default.Palette, contentDescription = null) }
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SettingsSectionHeader("Privacy & Storage")
+            SettingsSectionHeader(stringResource(R.string.settings_privacy_storage))
             ListItem(
                 modifier = Modifier.clickable { showDiskCacheDialog = true },
-                headlineContent = { Text("Thumbnail Cache Size") },
-                supportingContent = { Text("$diskCacheMb MB") },
+                headlineContent = { Text(stringResource(R.string.thumbnail_cache_size)) },
+                supportingContent = { Text(stringResource(R.string.cache_size_mb, diskCacheMb)) },
                 leadingContent = { Icon(Icons.Default.Storage, contentDescription = null) }
             )
             ListItem(
-                headlineContent = { Text("Trash Deletion Warning") },
-                supportingContent = { Text("Show reminder that trash is auto-deleted after 30 days") },
+                headlineContent = { Text(stringResource(R.string.trash_deletion_warning)) },
+                supportingContent = { Text(stringResource(R.string.trash_deletion_warning_desc)) },
                 leadingContent = { Icon(Icons.Default.RestoreFromTrash, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -330,16 +285,27 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SettingsSectionHeader("Editor Settings")
+            SettingsSectionHeader(stringResource(R.string.settings_editor))
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.enable_video_preload)) },
+                supportingContent = { Text(stringResource(R.string.enable_video_preload_desc)) },
+                leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                trailingContent = {
+                    Switch(
+                        checked = enableVideoPreload,
+                        onCheckedChange = { viewModel.setEnableVideoPreload(it) }
+                    )
+                }
+            )
             ListItem(
                 modifier = Modifier.clickable {
                     loadEditors(false)
                     showEditorDialog = true
                 },
-                headlineContent = { Text("Use Default Photo Editor") },
+                headlineContent = { Text(stringResource(R.string.use_default_photo_editor)) },
                 supportingContent = {
-                    val currentEditor = availableEditors.find { it.packageName == defaultEditorPackage }?.name ?: "None selected"
-                    Text("Selected: $currentEditor")
+                    val currentEditor = availableEditors.find { it.packageName == defaultEditorPackage }?.name ?: stringResource(R.string.none_selected)
+                    Text(stringResource(R.string.selected_editor, currentEditor))
                 },
                 leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
                 trailingContent = {
@@ -354,10 +320,10 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     loadEditors(true)
                     showVideoEditorDialog = true
                 },
-                headlineContent = { Text("Use Default Video Editor") },
+                headlineContent = { Text(stringResource(R.string.use_default_video_editor)) },
                 supportingContent = {
-                    val currentEditor = availableVideoEditors.find { it.packageName == defaultVideoEditorPackage }?.name ?: "None selected"
-                    Text("Selected: $currentEditor")
+                    val currentEditor = availableVideoEditors.find { it.packageName == defaultVideoEditorPackage }?.name ?: stringResource(R.string.none_selected)
+                    Text(stringResource(R.string.selected_editor, currentEditor))
                 },
                 leadingContent = { Icon(Icons.Default.Movie, contentDescription = null) },
                 trailingContent = {
@@ -368,8 +334,8 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
             )
             ListItem(
-                headlineContent = { Text("Auto-Play Video") },
-                supportingContent = { Text("Automatically play video when opened") },
+                headlineContent = { Text(stringResource(R.string.auto_play_video)) },
+                supportingContent = { Text(stringResource(R.string.auto_play_video_desc)) },
                 leadingContent = { Icon(Icons.Default.PlayCircle, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -379,8 +345,8 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
             )
             ListItem(
-                headlineContent = { Text("Default Mute Video") },
-                supportingContent = { Text("Start videos muted by default") },
+                headlineContent = { Text(stringResource(R.string.default_mute_video)) },
+                supportingContent = { Text(stringResource(R.string.default_mute_video_desc)) },
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.VolumeOff, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -399,7 +365,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Version 1.0 - By Tama",
+                    text = stringResource(R.string.version_author),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -410,10 +376,10 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showGridColumnsDialog) {
         AlertDialog(
             onDismissRequest = { showGridColumnsDialog = false },
-            title = { Text("Grid Columns") },
+            title = { Text(stringResource(R.string.grid_columns)) },
             text = {
                 Column {
-                    listOf(2, 3, 4).forEach { columns ->
+                    listOf(2, 3, 4, 5).forEach { columns ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -426,14 +392,14 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         ) {
                             RadioButton(selected = gridColumns == columns, onClick = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("$columns columns")
+                            Text(stringResource(R.string.grid_columns_count, columns))
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showGridColumnsDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -442,13 +408,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showRotationModeDialog) {
         AlertDialog(
             onDismissRequest = { showRotationModeDialog = false },
-            title = { Text("Fullscreen Rotation Mode") },
+            title = { Text(stringResource(R.string.fullscreen_rotation_mode)) },
             text = {
                 Column {
                     listOf(
-                        FullscreenRotationMode.SYSTEM_SETTING to "Follow System Setting",
-                        FullscreenRotationMode.DEVICE_ROTATION to "Force Device Rotation (Sensor)",
-                        FullscreenRotationMode.ASPECT_RATIO to "Auto Aspect Ratio"
+                        FullscreenRotationMode.SYSTEM_SETTING to stringResource(R.string.rotation_system),
+                        FullscreenRotationMode.DEVICE_ROTATION to stringResource(R.string.rotation_device),
+                        FullscreenRotationMode.ASPECT_RATIO to stringResource(R.string.rotation_aspect)
                     ).forEach { (mode, label) ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -469,7 +435,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showRotationModeDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -478,7 +444,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showDiskCacheDialog) {
         AlertDialog(
             onDismissRequest = { showDiskCacheDialog = false },
-            title = { Text("Thumbnail Cache Size") },
+            title = { Text(stringResource(R.string.thumbnail_cache_size)) },
             text = {
                 Column {
                     listOf(256, 512, 1024).forEach { size ->
@@ -490,21 +456,21 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                     viewModel.setDiskCacheMb(size)
                                     showDiskCacheDialog = false
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Restart app to apply cache changes")
+                                        snackbarHostState.showSnackbar(context.getString(R.string.restart_app_cache))
                                     }
                                 }
                                 .padding(vertical = 12.dp)
                         ) {
                             RadioButton(selected = diskCacheMb == size, onClick = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("$size MB")
+                            Text(stringResource(R.string.cache_size_mb, size))
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showDiskCacheDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -513,14 +479,14 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showDefaultSortDialog) {
         AlertDialog(
             onDismissRequest = { showDefaultSortDialog = false },
-            title = { Text("Default Sort Order") },
+            title = { Text(stringResource(R.string.default_sort_order)) },
             text = {
                 Column {
                     listOf(
-                        "DATE_NEWEST" to "Date: Newest First",
-                        "DATE_OLDEST" to "Date: Oldest First",
-                        "SIZE_LARGEST" to "Size: Largest First",
-                        "SIZE_SMALLEST" to "Size: Smallest First"
+                        "DATE_NEWEST" to stringResource(R.string.sort_newest_label),
+                        "DATE_OLDEST" to stringResource(R.string.sort_oldest_label),
+                        "SIZE_LARGEST" to stringResource(R.string.sort_largest_label),
+                        "SIZE_SMALLEST" to stringResource(R.string.sort_smallest_label)
                     ).forEach { (value, label) ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -541,7 +507,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showDefaultSortDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -550,7 +516,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showThemeColorDialog) {
         AlertDialog(
             onDismissRequest = { showThemeColorDialog = false },
-            title = { Text("Choose Theme Color") },
+            title = { Text(stringResource(R.string.theme_color)) },
             text = {
                 Column {
                     AppThemeColor.entries.forEach { color ->
@@ -579,7 +545,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showThemeColorDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -588,7 +554,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("Choose Theme") },
+            title = { Text(stringResource(R.string.app_theme)) },
             text = {
                 Column {
                     listOf("System", "Light", "Dark").forEach { mode ->
@@ -611,136 +577,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showThemeDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (showAccentColorDialog) {
-        AlertDialog(
-            onDismissRequest = { showAccentColorDialog = false },
-            title = { Text("Choose Primary Color") },
-            text = {
-                Column {
-                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 48.dp),
-                        modifier = Modifier.height(200.dp)
-                    ) {
-                        items(SelectableColors.size) { index ->
-                            val color = SelectableColors[index]
-                            Box(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(40.dp)
-                                    .background(color, CircleShape)
-                                    .clickable {
-                                        viewModel.setAccentColor(color.toArgb())
-                                        showAccentColorDialog = false
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (color.toArgb() == accentColorInt) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = if (color.toArgb() == Color.White.toArgb()) Color.Black else Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAccentColorDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (showSecondaryColorDialog) {
-        AlertDialog(
-            onDismissRequest = { showSecondaryColorDialog = false },
-            title = { Text("Choose Secondary Color") },
-            text = {
-                Column {
-                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 48.dp),
-                        modifier = Modifier.height(200.dp)
-                    ) {
-                        items(SelectableColors.size) { index ->
-                            val color = SelectableColors[index]
-                            Box(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(40.dp)
-                                    .background(color, CircleShape)
-                                    .clickable {
-                                        viewModel.setSecondaryColor(color.toArgb())
-                                        showSecondaryColorDialog = false
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (color.toArgb() == secondaryColorInt) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = if (color.toArgb() == Color.White.toArgb()) Color.Black else Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSecondaryColorDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (showTertiaryColorDialog) {
-        AlertDialog(
-            onDismissRequest = { showTertiaryColorDialog = false },
-            title = { Text("Choose Tertiary Color") },
-            text = {
-                Column {
-                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 48.dp),
-                        modifier = Modifier.height(200.dp)
-                    ) {
-                        items(SelectableColors.size) { index ->
-                            val color = SelectableColors[index]
-                            Box(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .size(40.dp)
-                                    .background(color, CircleShape)
-                                    .clickable {
-                                        viewModel.setTertiaryColor(color.toArgb())
-                                        showTertiaryColorDialog = false
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (color.toArgb() == tertiaryColorInt) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = if (color.toArgb() == Color.White.toArgb()) Color.Black else Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTertiaryColorDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -749,7 +586,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showDateFormatDialog) {
         AlertDialog(
             onDismissRequest = { showDateFormatDialog = false },
-            title = { Text("Date Format") },
+            title = { Text(stringResource(R.string.date_format)) },
             text = {
                 Column {
                     listOf("dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd MMM yyyy").forEach { format ->
@@ -772,39 +609,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showDateFormatDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (showFontDialog) {
-        AlertDialog(
-            onDismissRequest = { showFontDialog = false },
-            title = { Text("Choose Font Style") },
-            text = {
-                Column {
-                    listOf("Default", "Jakarta Sans", "Jakarta Sans Italic").forEach { font ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setFontFamily(font)
-                                    showFontDialog = false
-                                }
-                                .padding(vertical = 12.dp)
-                        ) {
-                            RadioButton(selected = fontFamily == font, onClick = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(font)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showFontDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -813,7 +618,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showEditorDialog) {
         AlertDialog(
             onDismissRequest = { showEditorDialog = false },
-            title = { Text("Choose Default Photo Editor") },
+            title = { Text(stringResource(R.string.use_default_photo_editor)) },
             text = {
                 LazyColumn {
                     items(availableEditors) { editor ->
@@ -841,7 +646,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     if (availableEditors.isEmpty()) {
                         item {
                             Text(
-                                "No photo editor apps found",
+                                stringResource(R.string.no_photo_editors_found),
                                 modifier = Modifier.padding(16.dp),
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -851,7 +656,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showEditorDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -860,7 +665,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (showVideoEditorDialog) {
         AlertDialog(
             onDismissRequest = { showVideoEditorDialog = false },
-            title = { Text("Choose Default Video Editor") },
+            title = { Text(stringResource(R.string.use_default_video_editor)) },
             text = {
                 LazyColumn {
                     items(availableVideoEditors) { editor ->
@@ -888,7 +693,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     if (availableVideoEditors.isEmpty()) {
                         item {
                             Text(
-                                "No video editor apps found",
+                                stringResource(R.string.no_video_editors_found),
                                 modifier = Modifier.padding(16.dp),
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -898,7 +703,88 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = { showVideoEditorDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showHiddenAlbumsDialog) {
+        val allAlbums by viewModel.getAllAlbumsFlow().collectAsState(initial = emptyList())
+        val hiddenAlbums = allAlbums.filter { it.id in hiddenAlbumIds }
+
+        AlertDialog(
+            onDismissRequest = { showHiddenAlbumsDialog = false },
+            title = { Text(stringResource(R.string.manage_hidden_albums)) },
+            text = {
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    items(hiddenAlbums) { album ->
+                        ListItem(
+                            headlineContent = { Text(album.name) },
+                            trailingContent = {
+                                TextButton(onClick = { viewModel.toggleAlbumHidden(album.id) }) {
+                                    Text(stringResource(R.string.unhide))
+                                }
+                            }
+                        )
+                    }
+                    if (hiddenAlbums.isEmpty()) {
+                        item {
+                            Text(
+                                stringResource(R.string.no_hidden_albums),
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHiddenAlbumsDialog = false }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
+    if (showQuickAccessDialog) {
+        val options = listOf(
+            "favorites" to stringResource(R.string.favorites),
+            "trash" to stringResource(R.string.trash),
+            "videos" to stringResource(R.string.videos),
+            "screenshots" to stringResource(R.string.screenshots)
+        )
+
+        AlertDialog(
+            onDismissRequest = { showQuickAccessDialog = false },
+            title = { Text(stringResource(R.string.configure_quick_access)) },
+            text = {
+                Column {
+                    options.forEach { (id, label) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val newSet = if (quickAccessItems.contains(id)) {
+                                        quickAccessItems - id
+                                    } else {
+                                        quickAccessItems + id
+                                    }
+                                    viewModel.setQuickAccessItems(newSet)
+                                }
+                                .padding(vertical = 12.dp)
+                        ) {
+                            Checkbox(checked = quickAccessItems.contains(id), onCheckedChange = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showQuickAccessDialog = false }) {
+                    Text(stringResource(R.string.ok))
                 }
             }
         )

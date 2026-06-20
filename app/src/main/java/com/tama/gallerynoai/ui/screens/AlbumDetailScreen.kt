@@ -21,6 +21,7 @@ fun AlbumDetailScreen(
     val mediaItems by viewModel.mediaItems.collectAsState()
     val sortType by viewModel.sortType.collectAsState()
     val gridColumns by viewModel.gridColumns.collectAsState()
+    val gridPadding = 1
     
     var albumMedia by remember { mutableStateOf(emptyList<MediaItem>()) }
 
@@ -45,6 +46,7 @@ fun AlbumDetailScreen(
         onBackClick = onBackClick,
         onSearchClick = onSearchClick,
         onDeleteRequest = onDeleteRequest,
-        gridColumns = gridColumns
+        gridColumns = gridColumns,
+        gridPadding = gridPadding
     )
 }

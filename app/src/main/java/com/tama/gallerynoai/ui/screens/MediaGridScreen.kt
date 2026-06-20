@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.model.MediaItem
 import com.tama.gallerynoai.data.model.SortType
 import com.tama.gallerynoai.ui.components.CreateFolderDialog
@@ -49,7 +51,8 @@ fun MediaGridScreen(
     onBackClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     onDeleteRequest: (IntentSender) -> Unit = {},
-    gridColumns: Int = 3
+    gridColumns: Int = 3,
+    gridPadding: Int = 1
 ) {
     val sortType by viewModel.sortType.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
@@ -111,7 +114,7 @@ fun MediaGridScreen(
                                 putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(selectedUris))
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share media"))
+                            context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
                         }
                     },
                     onSelectAll = {
@@ -151,49 +154,49 @@ fun MediaGridScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
                     },
                     actions = {
                         TextButton(onClick = { viewModel.setSelectionMode(true) }) {
-                            Text("Select")
+                            Text(stringResource(R.string.select))
                         }
                         if (onSearchClick != null) {
                             IconButton(onClick = onSearchClick) {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
+                                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                             }
                         }
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
                             }
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Date (Newest)") },
+                                    text = { Text(stringResource(R.string.sort_date_newest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.DATE_NEWEST)
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Date (Oldest)") },
+                                    text = { Text(stringResource(R.string.sort_date_oldest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.DATE_OLDEST)
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Size (Largest)") },
+                                    text = { Text(stringResource(R.string.sort_size_largest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.SIZE_LARGEST)
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Size (Smallest)") },
+                                    text = { Text(stringResource(R.string.sort_size_smallest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.SIZE_SMALLEST)
                                         showMenu = false
@@ -295,9 +298,9 @@ fun MediaGridScreen(
                                 onDragCancel = { dragSelectionState = null }
                             )
                         },
-                    contentPadding = PaddingValues(1.dp),
-                    horizontalArrangement = Arrangement.spacedBy(1.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                    contentPadding = PaddingValues(gridPadding.dp),
+                    horizontalArrangement = Arrangement.spacedBy(gridPadding.dp),
+                    verticalArrangement = Arrangement.spacedBy(gridPadding.dp)
                 ) {
                     items(
                         count = groupedItems.size,

@@ -103,14 +103,12 @@ fun ZoomableBox(
                                     val atRightEdge = offset.x <= -maxX && panChange.x < 0
                                     
                                     val shouldConsumeHorizontal = scale > 1.01f && !atLeftEdge && !atRightEdge
+                                    val shouldConsumeZoom = zoomChange != 1f
 
-                                    if (shouldConsumeHorizontal || zoomChange != 1f) {
+                                    if (shouldConsumeHorizontal || shouldConsumeZoom) {
                                         event.changes.forEach { 
                                             if (it.positionChanged()) {
-                                                // Consume only if we are taking the gesture
-                                                if (shouldConsumeHorizontal || zoomChange != 1f) {
-                                                    it.consume()
-                                                }
+                                                it.consume()
                                             }
                                         }
                                     }

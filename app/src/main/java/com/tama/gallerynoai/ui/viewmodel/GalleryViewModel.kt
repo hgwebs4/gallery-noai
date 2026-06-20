@@ -9,6 +9,7 @@ import com.tama.gallerynoai.data.repository.MediaRepository
 import com.tama.gallerynoai.data.repository.MediaSearchProvider
 import com.tama.gallerynoai.data.settings.FullscreenRotationMode
 import com.tama.gallerynoai.data.settings.SettingsManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
@@ -30,26 +31,22 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.insertSeparators
 import androidx.paging.map
+import javax.inject.Inject
 
 sealed class GalleryItem {
     data class Header(val date: String, val timestamp: Long) : GalleryItem()
     data class Media(val item: MediaItem) : GalleryItem()
 }
 
+@HiltViewModel
 @OptIn(FlowPreview::class)
-class GalleryViewModel(
+class GalleryViewModel @Inject constructor(
     private val repository: MediaRepository,
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val searchProvider: MediaSearchProvider
 ) : ViewModel() {
 
-    // Sort type moved to the top to be readable by other variables below
-    private val _sortType = MutableStateFlow(
-        try {
-            SortType.valueOf(settingsManager.defaultSort.value)
-        } catch (e: Exception) {
-            SortType.DATE_NEWEST
-        }
-    )
+    private val _sortType = MutableStateFlow(SortType.DATE_NEWEST)
     val sortType: StateFlow<SortType> = _sortType.asStateFlow()
 
     val dateFormat: StateFlow<String> = settingsManager.dateFormat
@@ -96,15 +93,15 @@ class GalleryViewModel(
     )
 
     private val dateCache = ConcurrentHashMap<Long, String>()
-    private val searchProvider = MediaSearchProvider()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val pagedMediaItems: Flow<PagingData<GalleryItem>> = combine(
         settingsManager.dateFormat,
-        _sortType
-    ) { format, sort ->
-        format to sort
-    }.flatMapLatest { (format, sort) ->
+        _sortType,
+        settingsManager.hiddenAlbumIds
+    ) { format, sort, hiddenIds ->
+        Triple(format, sort, hiddenIds.toList())
+    }.flatMapLatest { (format, sort, hiddenIds) ->
         val formatter = try {
             DateTimeFormatter.ofPattern(format, Locale.getDefault())
                 .withZone(ZoneId.systemDefault())
@@ -113,7 +110,7 @@ class GalleryViewModel(
                 .withZone(ZoneId.systemDefault())
         }
 
-        repository.getMediaPaged(sort).map { pagingData ->
+        repository.getMediaPaged(sort, hiddenIds).map { pagingData ->
             dateCache.clear()
             val mapped = pagingData.map { GalleryItem.Media(it) as GalleryItem }
 
@@ -159,6 +156,9 @@ class GalleryViewModel(
     val fullscreenRotationMode: StateFlow<FullscreenRotationMode> = settingsManager.fullscreenRotationMode
     val gridColumns: StateFlow<Int> = settingsManager.gridColumns
     val trashWarningEnabled: StateFlow<Boolean> = settingsManager.trashWarningEnabled
+    val enableVideoPreload: StateFlow<Boolean> = settingsManager.enableVideoPreload
+    val hiddenAlbumIds: StateFlow<Set<String>> = settingsManager.hiddenAlbumIds
+    val quickAccessItems: StateFlow<Set<String>> = settingsManager.quickAccessItems
 
     private val _scrollToTopTrigger = MutableSharedFlow<String>(replay = 0)
     val scrollToTopTrigger: SharedFlow<String> = _scrollToTopTrigger.asSharedFlow()
@@ -174,9 +174,6 @@ class GalleryViewModel(
 
     private val _screenshotItems = MutableStateFlow<List<MediaItem>>(emptyList())
     val screenshotItems: StateFlow<List<MediaItem>> = _screenshotItems.asStateFlow()
-
-    private val _groupedItems = MutableStateFlow<List<GalleryItem>>(emptyList())
-    val groupedItems: StateFlow<List<GalleryItem>> = _groupedItems.asStateFlow()
 
     private val _albums = MutableStateFlow<List<AlbumItem>>(emptyList())
     val albums: StateFlow<List<AlbumItem>> = _albums.asStateFlow()
@@ -195,6 +192,21 @@ class GalleryViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val pagedSearchResults: Flow<PagingData<MediaItem>> = combine(
+        _searchQuery.debounce(300.milliseconds),
+        settingsManager.hiddenAlbumIds
+    ) { query, hiddenIds ->
+        query to hiddenIds.toList()
+    }.flatMapLatest { (query, hiddenIds) ->
+        if (query.isBlank()) {
+            flowOf(PagingData.empty())
+        } else {
+            repository.searchMediaPaged(query, hiddenIds)
+                .cachedIn(viewModelScope)
+        }
+    }
 
     private val _searchResults = MutableStateFlow<List<MediaItem>>(emptyList())
     val searchResults: StateFlow<List<MediaItem>> = _searchResults.asStateFlow()
@@ -225,6 +237,9 @@ class GalleryViewModel(
     private val _pendingMovePath = MutableStateFlow<String?>(null)
 
     private val _pendingMoveUris = MutableStateFlow<List<Uri>>(emptyList())
+
+    private var pendingRenameUri: Uri? = null
+    private var pendingRenameName: String? = null
 
     private var loadJob: Job? = null
     private var searchJob: Job? = null
@@ -268,10 +283,16 @@ class GalleryViewModel(
             }
             .launchIn(viewModelScope)
 
+        repository.getAlbumStats()
+            .onEach {
+                _albums.value = it
+            }
+            .launchIn(viewModelScope)
+
         _searchQuery
             .debounce(300.milliseconds)
             .onEach { query ->
-                filterMedia(query)
+                // filterMedia(query) // Removed for Paging
             }
             .launchIn(viewModelScope)
 
@@ -289,7 +310,7 @@ class GalleryViewModel(
             .onEach { sortString ->
                 try {
                     val newSortType = SortType.valueOf(sortString)
-                    setSortType(newSortType)
+                    _sortType.value = newSortType
                 } catch (e: Exception) {
                     // Ignore invalid sort types
                 }
@@ -387,10 +408,8 @@ class GalleryViewModel(
             try {
                 if (!silent) _isLoading.value = true
 
-                val albums = repository.fetchAlbums()
-                withContext(Dispatchers.Main) {
-                    _albums.value = albums
-                }
+                // Sync MediaStore with Room first to ensure we have up-to-date data
+                repository.syncMediaStoreWithRoom()
 
                 loadTrashedMedia()
                 refreshUniqueTags()
@@ -439,7 +458,35 @@ class GalleryViewModel(
     fun moveMedia(uris: List<Uri>, targetPath: String): IntentSender? {
         _pendingMovePath.value = targetPath
         _pendingMoveUris.value = uris
-        return repository.moveMedia(uris)
+        val intentSender = repository.moveMedia(uris)
+        if (intentSender == null) {
+            onMoveConfirmed()
+        }
+        return intentSender
+    }
+
+    fun renameMedia(item: MediaItem, newName: String): IntentSender? {
+        pendingRenameUri = item.uri
+        pendingRenameName = newName
+        
+        val result = repository.renameMedia(item.uri, newName)
+        if (result == null) {
+            loadMedia(false)
+            pendingRenameUri = null
+            pendingRenameName = null
+        }
+        return result
+    }
+
+    fun onRenameConfirmed() {
+        val uri = pendingRenameUri ?: return
+        val name = pendingRenameName ?: return
+        viewModelScope.launch {
+            repository.renameMedia(uri, name)
+            pendingRenameUri = null
+            pendingRenameName = null
+            loadMedia(false)
+        }
     }
 
     fun onMoveConfirmed() {
@@ -471,8 +518,7 @@ class GalleryViewModel(
     }
 
     fun setSortType(type: SortType) {
-        _sortType.value = type
-        viewModelScope.launch { updateDisplayItems() }
+        settingsManager.setDefaultSort(type.name)
     }
 
     fun toggleSelection(itemId: Long) {
@@ -496,6 +542,10 @@ class GalleryViewModel(
         _albumSelectionMode.value = false
     }
 
+    fun toggleAlbumHidden(id: String) {
+        settingsManager.toggleAlbumHidden(id)
+    }
+
     fun toggleAlbumSelection(albumId: String) {
         _selectedAlbumIds.value = if (_selectedAlbumIds.value.contains(albumId)) _selectedAlbumIds.value - albumId else _selectedAlbumIds.value + albumId
         if (_selectedAlbumIds.value.isNotEmpty() && !_albumSelectionMode.value) _albumSelectionMode.value = true
@@ -513,15 +563,8 @@ class GalleryViewModel(
 
     private suspend fun updateDisplayItems() {
         withContext(Dispatchers.Default) {
-            val items = _mediaItems.value
-            val currentFormat = settingsManager.dateFormat.value
-            val grouped = when (_sortType.value) {
-                SortType.DATE_NEWEST -> groupMediaByDate(items.sortedByDescending { it.dateModified }, currentFormat)
-                SortType.DATE_OLDEST -> groupMediaByDate(items.sortedBy { it.dateModified }, currentFormat)
-                SortType.SIZE_LARGEST -> items.sortedByDescending { it.size }.map { GalleryItem.Media(it) }
-                SortType.SIZE_SMALLEST -> items.sortedBy { it.size }.map { GalleryItem.Media(it) }
-            }
-            _groupedItems.value = grouped
+            // Update albums when media items change
+            loadMedia(silent = true)
         }
     }
 

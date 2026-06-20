@@ -11,12 +11,11 @@ class Converters {
 
     @TypeConverter
     fun toStringList(value: String): List<String> {
-        val jsonArray = JSONArray(value)
         val list = mutableListOf<String>()
-        for (i in 0 until jsonArray.length()) {
-            list.add(jsonArray.getString(i))
+        val array = JSONArray(value)
+        for (i in 0 until array.length()) {
+            list.add(array.getString(i))
         }
         return list
     }
 }
-

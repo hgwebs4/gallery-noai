@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.model.MediaItem
 import kotlinx.coroutines.flow.StateFlow
 
@@ -45,39 +48,45 @@ fun SelectionTopAppBar(
     onSelectAll: (() -> Unit)? = null,
     onFavorite: (() -> Unit)? = null,
     onBatchTag: (() -> Unit)? = null,
+    onHide: (() -> Unit)? = null,
     onCopyToFolder: (() -> Unit)? = null,
     onMoveToFolder: (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     isAllFavorite: Boolean = false
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val hasMenuOptions = onSelectAll != null || onFavorite != null || onBatchTag != null || onCopyToFolder != null || onMoveToFolder != null
+    val hasMenuOptions = onSelectAll != null || onFavorite != null || onBatchTag != null || onHide != null || onCopyToFolder != null || onMoveToFolder != null
 
     TopAppBar(
         title = {
             Text(
-                "$selectedCount Selected",
+                stringResource(R.string.selected_count, selectedCount),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
             )
         },
         navigationIcon = {
             IconButton(onClick = onClearSelection) {
-                Icon(Icons.Default.Close, contentDescription = "Clear Selection")
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_selection))
             }
         },
         actions = {
             if (onShare != null) {
                 IconButton(onClick = onShare) {
-                    Icon(Icons.Default.Share, contentDescription = "Share")
+                    Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share))
                 }
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Move to Trash")
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.move_to_trash))
+            }
+            if (onHide != null) {
+                IconButton(onClick = onHide) {
+                    Icon(Icons.Default.VisibilityOff, contentDescription = stringResource(R.string.hide))
+                }
             }
             if (hasMenuOptions) {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
                 }
                 DropdownMenu(
                     expanded = showMenu,
@@ -85,7 +94,7 @@ fun SelectionTopAppBar(
                 ) {
                     onSelectAll?.let {
                         DropdownMenuItem(
-                            text = { Text("Select All") },
+                            text = { Text(stringResource(R.string.select_all)) },
                             onClick = {
                                 showMenu = false
                                 it()
@@ -94,7 +103,7 @@ fun SelectionTopAppBar(
                     }
                     onFavorite?.let {
                         DropdownMenuItem(
-                            text = { Text(if (isAllFavorite) "Unfavorite" else "Favorite") },
+                            text = { Text(stringResource(if (isAllFavorite) R.string.unfavorite else R.string.favorite)) },
                             onClick = {
                                 showMenu = false
                                 it()
@@ -103,7 +112,16 @@ fun SelectionTopAppBar(
                     }
                     onBatchTag?.let {
                         DropdownMenuItem(
-                            text = { Text("Add Tag") },
+                            text = { Text(stringResource(R.string.add_tag)) },
+                            onClick = {
+                                showMenu = false
+                                it()
+                            }
+                        )
+                    }
+                    onHide?.let {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.hide)) },
                             onClick = {
                                 showMenu = false
                                 it()
@@ -112,7 +130,7 @@ fun SelectionTopAppBar(
                     }
                     onCopyToFolder?.let {
                         DropdownMenuItem(
-                            text = { Text("Copy to folder") },
+                            text = { Text(stringResource(R.string.copy_to_folder)) },
                             onClick = {
                                 showMenu = false
                                 it()
@@ -121,7 +139,7 @@ fun SelectionTopAppBar(
                     }
                     onMoveToFolder?.let {
                         DropdownMenuItem(
-                            text = { Text("Move to folder") },
+                            text = { Text(stringResource(R.string.move_to_folder)) },
                             onClick = {
                                 showMenu = false
                                 it()
@@ -211,7 +229,7 @@ fun MediaGridItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.select),
                     modifier = Modifier.size(16.dp),
                     tint = Color.White
                 )
@@ -228,7 +246,7 @@ fun MediaGridItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Video",
+                    contentDescription = stringResource(R.string.videos),
                     modifier = Modifier.size(16.dp),
                     tint = Color.White
                 )
@@ -245,7 +263,7 @@ fun MediaGridItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Favorite,
-                    contentDescription = "Favorite",
+                    contentDescription = stringResource(R.string.favorites),
                     modifier = Modifier.size(16.dp),
                     tint = Color.Red
                 )
@@ -276,20 +294,20 @@ fun AddTagDialog(
             keyboardController?.hide()
             onDismiss()
         },
-        title = { Text("Add Custom Tag") },
+        title = { Text(stringResource(R.string.add_custom_tag)) },
         text = {
             Column {
                 TextField(
                     value = tagName,
                     onValueChange = { tagName = it },
-                    label = { Text("Tag Name") },
+                    label = { Text(stringResource(R.string.tag_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 if (suggestions.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Suggestions:", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.suggestions), style = MaterialTheme.typography.labelSmall)
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -312,7 +330,7 @@ fun AddTagDialog(
                 },
                 enabled = tagName.isNotBlank()
             ) {
-                Text("Add")
+                Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
@@ -320,8 +338,44 @@ fun AddTagDialog(
                 keyboardController?.hide()
                 onDismiss()
             }) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun MediaGridItemPreview() {
+    MaterialTheme {
+        Row(modifier = Modifier.padding(16.dp)) {
+            MediaGridItem(
+                item = MediaItem(
+                    id = 1,
+                    uri = android.net.Uri.EMPTY,
+                    name = "test.jpg",
+                    dateModified = 0,
+                    size = 0,
+                    mimeType = "image/jpeg",
+                    bucketId = "0",
+                    isVideo = false,
+                    isFavorite = false
+                ),
+                onClick = {}
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun SelectionTopAppBarPreview() {
+    MaterialTheme {
+        SelectionTopAppBar(
+            selectedCount = 5,
+            onClearSelection = {},
+            onDelete = {}
+        )
+    }
 }

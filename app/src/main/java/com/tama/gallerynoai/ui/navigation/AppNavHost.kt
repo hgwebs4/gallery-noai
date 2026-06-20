@@ -65,6 +65,9 @@ fun AppNavHost(
                 viewModel = galleryViewModel,
                 onMediaClick = { item ->
                     navController.navigate(NavRoutes.detail(item.id))
+                },
+                onDeleteRequest = { intentSender ->
+                    commonLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
                 }
             )
         }

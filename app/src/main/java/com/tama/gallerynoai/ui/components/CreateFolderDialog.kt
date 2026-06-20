@@ -5,6 +5,9 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
 
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
+
 @Composable
 fun CreateFolderDialog(
     onDismiss: () -> Unit,
@@ -14,12 +17,12 @@ fun CreateFolderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create New Folder") },
+        title = { Text(stringResource(R.string.create_new_folder)) },
         text = {
             TextField(
                 value = folderName,
                 onValueChange = { folderName = it },
-                label = { Text("Folder Name") },
+                label = { Text(stringResource(R.string.folder_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -33,12 +36,12 @@ fun CreateFolderDialog(
                 },
                 enabled = folderName.isNotBlank()
             ) {
-                Text("Create")
+                Text(stringResource(R.string.create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

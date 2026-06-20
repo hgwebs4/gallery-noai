@@ -5,6 +5,7 @@ import android.content.IntentSender
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -36,7 +37,9 @@ import com.tama.gallerynoai.ui.components.SelectionTopAppBar
 import com.tama.gallerynoai.ui.components.AddTagDialog
 import com.tama.gallerynoai.ui.viewmodel.GalleryViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.tama.gallerynoai.R
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
@@ -58,6 +61,8 @@ fun GalleryScreen(
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.selectionMode.collectAsStateWithLifecycle()
     val dateFormat by viewModel.dateFormat.collectAsStateWithLifecycle()
+    val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
+    val gridPadding = 1 // Use fixed padding
 
     // Get masterGridCount from ViewModel
     val masterGridCount by viewModel.masterGridCount.collectAsStateWithLifecycle(initialValue = 0)
@@ -107,7 +112,7 @@ fun GalleryScreen(
                                 putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(selectedUris))
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share media"))
+                            context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
                         }
                     },
                     onSelectAll = {
@@ -140,49 +145,49 @@ fun GalleryScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            "Photos",
+                            stringResource(R.string.nav_photos),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.headlineMedium
                         )
                     },
                     actions = {
                         TextButton(onClick = { viewModel.setSelectionMode(true) }) {
-                            Text("Select")
+                            Text(stringResource(R.string.select))
                         }
                         IconButton(onClick = onSearchClick) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                         }
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
                             }
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Date (Newest)") },
+                                    text = { Text(stringResource(R.string.sort_date_newest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.DATE_NEWEST)
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Date (Oldest)") },
+                                    text = { Text(stringResource(R.string.sort_date_oldest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.DATE_OLDEST)
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Size (Largest)") },
+                                    text = { Text(stringResource(R.string.sort_size_largest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.SIZE_LARGEST)
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Size (Smallest)") },
+                                    text = { Text(stringResource(R.string.sort_size_smallest)) },
                                     onClick = {
                                         viewModel.setSortType(SortType.SIZE_SMALLEST)
                                         showMenu = false
@@ -215,7 +220,7 @@ fun GalleryScreen(
                     }
                 } else if (hasLoadedOnce) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No photos or videos found")
+                        Text(stringResource(R.string.no_photos_found))
                     }
                 }
             } else {
@@ -266,14 +271,14 @@ fun GalleryScreen(
 
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(gridColumns),
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(isSelectionMode) {
                             if (!isSelectionMode) return@pointerInput
 
                             detectDragGestures(
-                                onDragStart = { offset ->
+                                onDragStart = { offset: Offset ->
                                     val itemUnderPointer = gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
                                         offset.y in item.offset.y.toFloat()..(item.offset.y + item.size.height).toFloat() &&
                                                 offset.x in item.offset.x.toFloat()..(item.offset.x + item.size.width).toFloat()
@@ -313,9 +318,9 @@ fun GalleryScreen(
                                 onDragCancel = { dragSelectionState = null }
                             )
                         },
-                    contentPadding = PaddingValues(1.dp),
-                    horizontalArrangement = Arrangement.spacedBy(1.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                    contentPadding = PaddingValues(gridPadding.dp),
+                    horizontalArrangement = Arrangement.spacedBy(gridPadding.dp),
+                    verticalArrangement = Arrangement.spacedBy(gridPadding.dp)
                 ) {
                     items(
                         count = pagedItems.itemCount,

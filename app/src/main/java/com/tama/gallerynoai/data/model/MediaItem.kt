@@ -10,6 +10,7 @@ data class MediaItem(
     val size: Long,
     val mimeType: String,
     val bucketId: String,
+    val bucketName: String? = null,
     val duration: Long? = null,
     val isVideo: Boolean = false,
     val customTags: List<String> = emptyList(), // Manually added tags

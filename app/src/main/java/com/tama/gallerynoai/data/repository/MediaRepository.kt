@@ -1,11 +1,13 @@
 package com.tama.gallerynoai.data.repository
 
+import android.app.RecoverableSecurityException
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
 import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -13,30 +15,36 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
-import com.tama.gallerynoai.data.local.db.MediaDatabase
+import com.tama.gallerynoai.data.local.db.MediaDao
+import com.tama.gallerynoai.data.local.db.SearchHistoryDao
+import com.tama.gallerynoai.data.local.db.SearchHistoryEntity
 import com.tama.gallerynoai.data.local.db.toEntity
 import com.tama.gallerynoai.data.local.db.toMediaItem
 import com.tama.gallerynoai.data.model.AlbumItem
 import com.tama.gallerynoai.data.model.MediaItem
 import com.tama.gallerynoai.data.model.SortType
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.map as flowMap
 
-class MediaRepository(private val context: Context, database: MediaDatabase) {
+@Singleton
+class MediaRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val mediaDao: MediaDao,
+    private val searchHistoryDao: SearchHistoryDao
+) {
 
     private companion object {
         const val BUCKET_ID_COL = "bucket_id"
         const val BUCKET_NAME_COL = "bucket_display_name"
     }
-
-    private val mediaDao = database.mediaDao()
-    private val searchHistoryDao = database.searchHistoryDao()
-
-    fun getTotalMediaCount() = mediaDao.getTotalMediaCount()
 
     fun getAllMediaFlow(): Flow<List<MediaItem>> {
         return mediaDao.getAllFlow().flowMap { entities ->
@@ -52,7 +60,7 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
 
     suspend fun saveSearch(query: String) = withContext(Dispatchers.IO) {
         if (query.isNotBlank()) {
-            searchHistoryDao.insert(com.tama.gallerynoai.data.local.db.SearchHistoryEntity(query, System.currentTimeMillis()))
+            searchHistoryDao.insert(SearchHistoryEntity(query, System.currentTimeMillis()))
         }
     }
 
@@ -64,7 +72,8 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
         searchHistoryDao.clearAll()
     }
 
-    fun getMediaPaged(sortType: SortType = SortType.DATE_NEWEST): Flow<PagingData<MediaItem>> {
+    fun getMediaPaged(sortType: SortType = SortType.DATE_NEWEST, hiddenIds: List<String> = emptyList()): Flow<PagingData<MediaItem>> {
+        val nonNullHiddenIds = hiddenIds.ifEmpty { listOf("") }
         return Pager(
             config = PagingConfig(
                 pageSize = 100,
@@ -74,12 +83,41 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
             ),
             pagingSourceFactory = {
                 when (sortType) {
-                    SortType.DATE_NEWEST -> mediaDao.getAllPagedDateNewest()
-                    SortType.DATE_OLDEST -> mediaDao.getAllPagedDateOldest()
-                    SortType.SIZE_LARGEST -> mediaDao.getAllPagedSizeLargest()
-                    SortType.SIZE_SMALLEST -> mediaDao.getAllPagedSizeSmallest()
+                    SortType.DATE_NEWEST -> mediaDao.getAllPagedDateNewest(nonNullHiddenIds)
+                    SortType.DATE_OLDEST -> mediaDao.getAllPagedDateOldest(nonNullHiddenIds)
+                    SortType.SIZE_LARGEST -> mediaDao.getAllPagedSizeLargest(nonNullHiddenIds)
+                    SortType.SIZE_SMALLEST -> mediaDao.getAllPagedSizeSmallest(nonNullHiddenIds)
                 }
             }
+        ).flow.flowMap { pagingData ->
+            pagingData.map { it.toMediaItem() }
+        }
+    }
+
+    fun getAlbumStats(): Flow<List<AlbumItem>> {
+        return mediaDao.getAlbumStats().flowMap { stats ->
+            stats.map { stat ->
+                AlbumItem(
+                    id = stat.bucketId,
+                    name = stat.bucketName ?: "Unknown",
+                    coverUri = stat.coverUri.toUri(),
+                    itemCount = stat.itemCount,
+                    totalSize = stat.totalSize,
+                    relativePath = stat.relativePath
+                )
+            }.sortedBy { it.name }
+        }
+    }
+
+    fun searchMediaPaged(query: String, hiddenIds: List<String> = emptyList()): Flow<PagingData<MediaItem>> {
+        val ftsQuery = if (query.contains("*")) query else "$query*"
+        val nonNullHiddenIds = hiddenIds.ifEmpty { listOf("") }
+        return Pager(
+            config = PagingConfig(
+                pageSize = 50,
+                enablePlaceholders = true
+            ),
+            pagingSourceFactory = { mediaDao.searchPaged(ftsQuery, nonNullHiddenIds) }
         ).flow.flowMap { pagingData ->
             pagingData.map { it.toMediaItem() }
         }
@@ -88,11 +126,34 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
     suspend fun syncMediaStoreWithRoom(): List<MediaItem> = withContext(Dispatchers.IO) {
         try {
             val mediaStoreItems = fetchMediaIdsAndDates()
+            
+            // Safeguard: If MediaStore returns empty but local DB is not empty, 
+            // check if we still have access before wiping local data.
+            if (mediaStoreItems.isEmpty()) {
+                val localCount = mediaDao.getTotalMediaCount().first()
+                if (localCount > 0) {
+                    val hasAccess = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        context.checkSelfPermission(android.Manifest.permission.READ_MEDIA_IMAGES) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                        context.checkSelfPermission(android.Manifest.permission.READ_MEDIA_VIDEO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    } else {
+                        context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    }
+                    
+                    if (!hasAccess) {
+                        return@withContext emptyList()
+                    }
+                }
+            }
+
             val existingItems = mediaDao.getAllIdsAndDates().associateBy { it.id }
 
             val idsToFetch = mediaStoreItems.filter { item ->
                 val existing = existingItems[item.id]
-                existing == null || existing.dateModified != item.dateModified
+                existing == null || 
+                existing.dateModified != item.dateModified || 
+                existing.name != item.name || 
+                existing.bucketId != item.bucketId ||
+                existing.bucketName != item.bucketName
             }.map { it.id }
 
             if (idsToFetch.isNotEmpty()) {
@@ -115,9 +176,17 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
         }
     }
 
+    suspend fun getAllAlbums(): List<AlbumItem> = fetchAlbums()
+
     private suspend fun fetchMediaIdsAndDates(): List<com.tama.gallerynoai.data.local.db.MediaIdAndDate> = withContext(Dispatchers.IO) {
         val list = mutableListOf<com.tama.gallerynoai.data.local.db.MediaIdAndDate>()
-        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATE_MODIFIED)
+        val projection = arrayOf(
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.DATE_MODIFIED,
+            BUCKET_ID_COL,
+            BUCKET_NAME_COL
+        )
         val queryUri = MediaStore.Files.getContentUri("external")
         val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?"
         val selectionArgs = arrayOf(
@@ -127,9 +196,20 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
 
         context.contentResolver.query(queryUri, projection, selection, selectionArgs, null)?.use { cursor ->
             val idIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val nameIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
             val dateIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
+            val bucketIdx = cursor.getColumnIndexOrThrow(BUCKET_ID_COL)
+            val bucketNameIdx = cursor.getColumnIndexOrThrow(BUCKET_NAME_COL)
             while (cursor.moveToNext()) {
-                list.add(com.tama.gallerynoai.data.local.db.MediaIdAndDate(cursor.getLong(idIdx), cursor.getLong(dateIdx)))
+                list.add(
+                    com.tama.gallerynoai.data.local.db.MediaIdAndDate(
+                        cursor.getLong(idIdx),
+                        cursor.getString(nameIdx) ?: "",
+                        cursor.getLong(dateIdx),
+                        cursor.getString(bucketIdx) ?: "",
+                        cursor.getString(bucketNameIdx)
+                    )
+                )
             }
         }
         list
@@ -152,6 +232,7 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
                 MediaStore.MediaColumns.DURATION,
                 MediaStore.Files.FileColumns.MEDIA_TYPE,
                 BUCKET_ID_COL,
+                BUCKET_NAME_COL,
                 MediaStore.MediaColumns.RELATIVE_PATH,
                 MediaStore.MediaColumns.WIDTH,
                 MediaStore.MediaColumns.HEIGHT
@@ -186,6 +267,10 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
                     val duration = if (!cursor.isNull(durIdx)) cursor.getLong(durIdx) else null
                     val mediaType = cursor.getInt(typeIdx)
                     val bucketId = if (bucketIdx != -1) cursor.getString(bucketIdx) ?: "" else ""
+                    val bucketName = if (bucketIdx != -1) {
+                        val bucketNameIdx = cursor.getColumnIndex(BUCKET_NAME_COL)
+                        if (bucketNameIdx != -1) cursor.getString(bucketNameIdx) else null
+                    } else null
                     val relativePath = if (relativePathIdx != -1) cursor.getString(relativePathIdx) else null
                     val width = if (widthIdx != -1 && !cursor.isNull(widthIdx)) cursor.getInt(widthIdx) else null
                     val height = if (heightIdx != -1 && !cursor.isNull(heightIdx)) cursor.getInt(heightIdx) else null
@@ -206,6 +291,7 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
                             size = size,
                             mimeType = mimeType,
                             bucketId = bucketId,
+                            bucketName = bucketName,
                             duration = duration,
                             isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO,
                             isFavorite = isFavorite,
@@ -380,14 +466,74 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
         return null
     }
 
+    fun renameMedia(uri: Uri, newName: String): IntentSender? {
+        val currentName = getDisplayNameFromUri(uri) ?: return null
+        val extension = currentName.substringAfterLast('.', "")
+        
+        val finalName = if (extension.isNotEmpty() && !newName.endsWith(".$extension", ignoreCase = true)) {
+            "$newName.$extension"
+        } else {
+            newName
+        }
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, finalName)
+        }
+
+        return try {
+            val updated = context.contentResolver.update(uri, contentValues, null, null)
+            if (updated == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // If update returned 0 but no exception, it might be due to scoped storage permissions on some devices/scenarios
+                // Requesting explicit write permission via createWriteRequest
+                MediaStore.createWriteRequest(context.contentResolver, listOf(uri)).intentSender
+            } else {
+                null
+            }
+        } catch (e: SecurityException) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val recoverableSecurityException = e as? RecoverableSecurityException
+                    ?: throw e
+                recoverableSecurityException.userAction.actionIntent.intentSender
+            } else {
+                throw e
+            }
+        }
+    }
+
     suspend fun performMove(uris: List<Uri>, targetRelativePath: String) = withContext(Dispatchers.IO) {
         val formattedPath = ensureStandardPath(targetRelativePath)
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.RELATIVE_PATH, formattedPath)
-        }
+        
         uris.forEach { uri ->
             try {
-                context.contentResolver.update(uri, contentValues, null, null)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, formattedPath)
+                    }
+                    context.contentResolver.update(uri, contentValues, null, null)
+                } else {
+                    // Fallback for API 26-28: Use the DATA column
+                    val projection = arrayOf(MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DISPLAY_NAME)
+                    context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val oldPath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA))
+                            val displayName = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME))
+                            
+                            val externalStorage = android.os.Environment.getExternalStorageDirectory().absolutePath
+                            val newDir = java.io.File(externalStorage, formattedPath)
+                            if (!newDir.exists()) newDir.mkdirs()
+                            
+                            val newFile = java.io.File(newDir, displayName)
+                            val oldFile = java.io.File(oldPath)
+                            
+                            if (oldFile.renameTo(newFile)) {
+                                val values = ContentValues().apply {
+                                    put(MediaStore.MediaColumns.DATA, newFile.absolutePath)
+                                }
+                                context.contentResolver.update(uri, values, null, null)
+                            }
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -482,6 +628,7 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
             MediaStore.MediaColumns.DURATION,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             BUCKET_ID_COL,
+            BUCKET_NAME_COL,
             MediaStore.MediaColumns.RELATIVE_PATH,
             MediaStore.MediaColumns.WIDTH,
             MediaStore.MediaColumns.HEIGHT
@@ -542,6 +689,10 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
                     val duration = if (!cursor.isNull(durIdx)) cursor.getLong(durIdx) else null
                     val mediaType = cursor.getInt(typeIdx)
                     val bucketId = if (bucketIdx != -1) cursor.getString(bucketIdx) ?: "" else ""
+                    val bucketName = if (bucketIdx != -1) {
+                        val bucketNameIdx = cursor.getColumnIndex(BUCKET_NAME_COL)
+                        if (bucketNameIdx != -1) cursor.getString(bucketNameIdx) else null
+                    } else null
                     val relativePath = if (relativePathIdx != -1) cursor.getString(relativePathIdx) else null
                     val width = if (widthIdx != -1 && !cursor.isNull(widthIdx)) cursor.getInt(widthIdx) else null
                     val height = if (heightIdx != -1 && !cursor.isNull(heightIdx)) cursor.getInt(heightIdx) else null
@@ -562,6 +713,7 @@ class MediaRepository(private val context: Context, database: MediaDatabase) {
                             size = size,
                             mimeType = mimeType,
                             bucketId = bucketId,
+                            bucketName = bucketName,
                             duration = duration,
                             isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO,
                             isFavorite = isFavorite,

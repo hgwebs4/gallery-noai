@@ -51,7 +51,7 @@ fun FastDateScroller(
     modifier: Modifier = Modifier,
     dateFormat: String = "MMM yyyy",
     fullMediaList: List<com.tama.gallerynoai.data.model.MediaItem>? = null, // Optional raw list for perfect auto-scaling
-    masterGridCount: Int = 0 // Parameter: Dihitung ringan dari ViewModel
+    masterGridCount: Int = 0 // Parameter: Calculated lightly from ViewModel
 ) {
     var isDraggingSlider by remember { mutableStateOf(false) }
     var isScrolling by remember { mutableStateOf(false) }

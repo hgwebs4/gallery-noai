@@ -6,14 +6,18 @@ import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 
 data class DetailedMetadata(
+    val cameraMake: String? = null,
     val cameraModel: String? = null,
     val aperture: String? = null,
     val iso: String? = null,
     val shutterSpeed: String? = null,
     val focalLength: String? = null,
+    val flash: String? = null,
+    val whiteBalance: String? = null,
+    val software: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val locationName: String? = null
+    val locationName: String? = null,
 )
 
 object MediaFileUtils {
@@ -32,16 +36,20 @@ object MediaFileUtils {
                 val latLong = exif.latLong
                 
                 DetailedMetadata(
+                    cameraMake = exif.getAttribute(ExifInterface.TAG_MAKE),
                     cameraModel = exif.getAttribute(ExifInterface.TAG_MODEL),
                     aperture = exif.getAttribute(ExifInterface.TAG_F_NUMBER)?.let { "f/$it" },
                     iso = exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY),
                     shutterSpeed = formatShutterSpeed(exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)),
                     focalLength = exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH)?.let { "${it}mm" },
+                    flash = formatFlash(exif.getAttributeInt(ExifInterface.TAG_FLASH, -1)),
+                    whiteBalance = formatWhiteBalance(exif.getAttributeInt(ExifInterface.TAG_WHITE_BALANCE, -1)),
+                    software = exif.getAttribute(ExifInterface.TAG_SOFTWARE),
                     latitude = latLong?.get(0),
-                    longitude = latLong?.get(1)
+                    longitude = latLong?.get(1),
                 )
             } ?: DetailedMetadata()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             DetailedMetadata()
         }
     }
@@ -63,9 +71,9 @@ object MediaFileUtils {
             DetailedMetadata(
                 cameraModel = model,
                 latitude = lat,
-                longitude = lon
+                longitude = lon,
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             DetailedMetadata()
         } finally {
             retriever.release()
@@ -77,12 +85,26 @@ object MediaFileUtils {
         return try {
             val exposure = exposureTime.toDouble()
             if (exposure < 1.0) {
-                "1/${(1.0 / exposure).toInt()}s"
+                val denominator = (1.0 / exposure).toInt()
+                "1/${denominator}s"
             } else {
                 "${exposure}s"
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             exposureTime
+        }
+    }
+
+    private fun formatFlash(flash: Int): String? {
+        if (flash == -1) return null
+        return if ((flash and 1) != 0) "Flash fired" else "No flash"
+    }
+
+    private fun formatWhiteBalance(whiteBalance: Int): String? {
+        return when (whiteBalance.toShort()) {
+            ExifInterface.WHITE_BALANCE_AUTO -> "Auto"
+            ExifInterface.WHITE_BALANCE_MANUAL -> "Manual"
+            else -> null
         }
     }
 
@@ -97,7 +119,7 @@ object MediaFileUtils {
             } else {
                 null to null
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null to null
         }
     }

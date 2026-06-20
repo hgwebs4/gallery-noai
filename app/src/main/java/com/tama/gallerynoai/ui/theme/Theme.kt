@@ -10,7 +10,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -66,37 +65,11 @@ private val SunsetOrangeDarkColorScheme = darkColorScheme(
     tertiary = SunsetOrangeDarkTertiary
 )
 
-private val AmoledDarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-    background = Color.Black,
-    surface = Color.Black,
-    surfaceVariant = Color(0xFF0D0D0D),
-    surfaceContainer = Color(0xFF111111),
-    surfaceContainerLow = Color(0xFF0A0A0A),
-    surfaceContainerHigh = Color(0xFF1A1A1A),
-    onBackground = Color.White,
-    onSurface = Color.White,
-)
-
-private val PlusJakartaSans = FontFamily(
-    Font(R.font.plus_jakarta_sans, FontWeight.Normal)
-)
-
-private val PlusJakartaSansItalic = FontFamily(
-    Font(R.font.plus_jakarta_sans_italic, FontWeight.Normal)
-)
-
 @Composable
 fun GalleryTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     themeColor: AppThemeColor = AppThemeColor.DEFAULT,
-    fontFamilyName: String = "Default",
     amoledMode: Boolean = false,
-    accentColor: Color? = null,
-    secondaryColor: Color? = null,
-    tertiaryColor: Color? = null,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -119,46 +92,28 @@ fun GalleryTheme(
             if (darkTheme) SunsetOrangeDarkColorScheme else SunsetOrangeLightColorScheme
         }
         else -> {
-            if (amoledMode && darkTheme) AmoledDarkColorScheme else if (darkTheme) DarkColorScheme else LightColorScheme
+            if (darkTheme) DarkColorScheme else LightColorScheme
         }
     }
 
-    // Apply manual overrides if present (e.g. from the custom color picker)
-    val finalColorScheme = if (accentColor != null || secondaryColor != null || tertiaryColor != null) {
-        val getContrastColor: (Color) -> Color = { color ->
-            if (color.luminance() > 0.5f) Color.Black else Color.White
-        }
-
+    // Apply AMOLED mode if enabled and in dark theme
+    val finalColorScheme = if (amoledMode && darkTheme) {
         colorScheme.copy(
-            primary = accentColor ?: colorScheme.primary,
-            onPrimary = accentColor?.let { getContrastColor(it) } ?: colorScheme.onPrimary,
-            primaryContainer = accentColor?.copy(alpha = 0.3f) ?: colorScheme.primaryContainer,
-            onPrimaryContainer = accentColor?.let { getContrastColor(it) } ?: colorScheme.onPrimaryContainer,
-
-            secondary = secondaryColor ?: colorScheme.secondary,
-            onSecondary = secondaryColor?.let { getContrastColor(it) } ?: colorScheme.onSecondary,
-            secondaryContainer = secondaryColor?.copy(alpha = 0.3f) ?: colorScheme.secondaryContainer,
-            onSecondaryContainer = secondaryColor?.let { getContrastColor(it) } ?: colorScheme.onSecondaryContainer,
-
-            tertiary = tertiaryColor ?: colorScheme.tertiary,
-            onTertiary = tertiaryColor?.let { getContrastColor(it) } ?: colorScheme.onTertiary,
-            tertiaryContainer = tertiaryColor?.copy(alpha = 0.3f) ?: colorScheme.tertiaryContainer,
-            onTertiaryContainer = tertiaryColor?.let { getContrastColor(it) } ?: colorScheme.onTertiaryContainer
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceVariant = Color(0xFF0D0D0D),
+            surfaceContainer = Color(0xFF111111),
+            surfaceContainerLow = Color(0xFF0A0A0A),
+            surfaceContainerHigh = Color(0xFF1A1A1A),
+            onBackground = Color.White,
+            onSurface = Color.White,
         )
     } else {
         colorScheme
     }
 
-    val fontFamily = remember(fontFamilyName) {
-        when (fontFamilyName) {
-            "Jakarta Sans" -> PlusJakartaSans
-            "Jakarta Sans Italic" -> PlusJakartaSansItalic
-            else -> FontFamily.Default
-        }
-    }
-
-    val typography = remember(fontFamily) {
-        getTypography(fontFamily)
+    val typography = remember {
+        getTypography(FontFamily.Default)
     }
 
     MaterialTheme(

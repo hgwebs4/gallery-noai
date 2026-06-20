@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.tama.gallerynoai.R
 import com.tama.gallerynoai.data.model.AlbumItem
 
 @Composable
@@ -23,7 +25,7 @@ fun FolderSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Folder") },
+        title = { Text(stringResource(R.string.select_folder)) },
         text = {
             LazyColumn(
                 modifier = Modifier
@@ -40,7 +42,7 @@ fun FolderSelectionDialog(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(Modifier.width(16.dp))
-                        Text("Create New Folder", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.create_new_folder), color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 items(albums) { album ->
@@ -56,7 +58,7 @@ fun FolderSelectionDialog(
                         Column {
                             Text(album.name)
                             Text(
-                                "${album.itemCount} items",
+                                stringResource(R.string.items_count, album.itemCount),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -68,7 +70,7 @@ fun FolderSelectionDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
