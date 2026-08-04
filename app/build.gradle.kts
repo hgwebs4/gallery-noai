@@ -1,3 +1,4 @@
+import java.io.File
 plugins {
     alias(libs.plugins.android.application)
     // Plugin kotlin.android sudah dihapus di sini
@@ -22,7 +23,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = System.getenv("KEYSTORE_FILE")?.let { java.io.File(it) }
+            storeFile = File(System.getenv("KEYSTORE_FILE") ?: "")
             storePassword = System.getenv("KEYSTORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
