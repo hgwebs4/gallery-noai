@@ -1,3 +1,3 @@
 #this file is only for trigger GitHub Action.
 
-Trigger 6
+Trigger 7
