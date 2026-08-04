@@ -1,75 +1,41 @@
-name: Android Release Build
+name: Generate Release Keystore
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - "action-trigger.md"
-
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: android-build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build:
-    name: Build Release APK
+  generate-keystore:
     runs-on: ubuntu-latest
 
-    env:
-      GRADLE_OPTS: >-
-        -Dorg.gradle.parallel=true
-        -Dorg.gradle.caching=true
-        -Dorg.gradle.configuration-cache=true
-        -Dorg.gradle.jvmargs=-Xmx4g
-
     steps:
-      # Checkout repository
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v6
 
-      # Setup Java
-      - name: Setup Java 21
+      - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
-          cache: gradle
 
-      # Cache Gradle
-      - name: Cache Gradle
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle.properties', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      # Make Gradle executable
-      - name: Grant execute permission
-        run: chmod +x gradlew
-
-      # Build Release APK
-      - name: Build Release APK
+      - name: Generate Release Keystore
         run: |
-          ./gradlew \
-            assembleRelease \
-            --build-cache \
-            --configuration-cache \
-            --parallel \
-            --stacktrace
+          mkdir -p keystore
 
-      # Upload Release APK
-      - name: Upload Release APK
+          keytool -genkeypair \
+            -keystore keystore/release.keystore \
+            -storepass android \
+            -keypass android \
+            -alias release \
+            -keyalg RSA \
+            -keysize 4096 \
+            -validity 10000 \
+            -dname "CN=HG,O=HG,C=IN"
+
+      - name: Upload Keystore
         uses: actions/upload-artifact@v6
         with:
-          name: app-release
-          path: app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
+          name: release-keystore
+          path: keystore/release.keystore
