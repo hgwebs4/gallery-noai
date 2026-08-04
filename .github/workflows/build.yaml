@@ -1,41 +1,87 @@
-name: Generate Release Keystore
+name: Android Release Build
 
 on:
+  push:
+    branches:
+      - master
+    paths:
+      - "action-trigger.md"
+
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  generate-keystore:
+  build:
+    name: Build Release APK
     runs-on: ubuntu-latest
 
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.parallel=true
+        -Dorg.gradle.caching=true
+        -Dorg.gradle.configuration-cache=true
+        -Dorg.gradle.jvmargs=-Xmx4g
+
     steps:
-      - name: Checkout
+      # Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v6
 
-      - name: Setup Java
+      # Setup Java
+      - name: Setup Java 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
+          cache: gradle
 
-      - name: Generate Release Keystore
+      # Cache Gradle
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle.properties', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # Restore release keystore from GitHub Secrets
+      - name: Restore Release Keystore
+        shell: bash
         run: |
           mkdir -p keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore/release.keystore
 
-          keytool -genkeypair \
-            -keystore keystore/release.keystore \
-            -storepass android \
-            -keypass android \
-            -alias release \
-            -keyalg RSA \
-            -keysize 4096 \
-            -validity 10000 \
-            -dname "CN=HG,O=HG,C=IN"
+      # Make Gradle executable
+      - name: Grant execute permission
+        run: chmod +x gradlew
 
-      - name: Upload Keystore
+      # Build signed Release APK
+      - name: Build Release APK
+        env:
+          KEYSTORE_FILE: keystore/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew \
+            assembleRelease \
+            --build-cache \
+            --configuration-cache \
+            --parallel \
+            --stacktrace
+
+      # Upload APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v6
         with:
-          name: release-keystore
-          path: keystore/release.keystore
+          name: app-release
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
