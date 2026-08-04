@@ -234,66 +234,64 @@ sealed class Screen(val route: String, val labelId: Int, val icon: ImageVector) 
 
 @Composable
 fun BottomNavigationBar(
-    navController: androidx.navigation.NavHostController, 
-    currentDestination: androidx.navigation.NavDestination?,
-    galleryViewModel: GalleryViewModel,
-    showLabel: Boolean = true,
-    onTabReselected: (Screen) -> Unit
+    currentRoute: String?,
+    onNavigate: (String) -> Unit
 ) {
-    val items = listOf(Screen.Photos, Screen.Albums, Screen.Settings)
-    val previousRoute = remember(currentDestination) {
-        navController.previousBackStackEntry?.destination?.route
-    }
+    val items = listOf(
+        BottomNavItem("Photos", Icons.Outlined.Photo, "photos"),
+        BottomNavItem("Albums", Icons.Outlined.PhotoLibrary, "albums"),
+        BottomNavItem("Settings", Icons.Outlined.Settings, "settings")
+    )
 
-    val isSearchOwnedByAlbums = currentDestination?.route == NavRoutes.SEARCH && 
-        previousRoute in listOf(
-            NavRoutes.ALBUMS, 
-            NavRoutes.ALBUM_DETAIL, 
-            NavRoutes.QUICK_ACCESS
-        )
-
-    NavigationBar(
-        containerColor = Color.Transparent,
+    Surface(
+        shadowElevation = 4.dp,
         tonalElevation = 0.dp
     ) {
-        items.forEach { screen ->
-            val isSelected = when (screen) {
-                Screen.Photos -> (currentDestination?.route in listOf(NavRoutes.PHOTOS, NavRoutes.DETAIL)) || 
-                                (currentDestination?.route == NavRoutes.SEARCH && !isSearchOwnedByAlbums)
-                Screen.Search -> currentDestination?.route == NavRoutes.SEARCH
-                Screen.Albums -> (currentDestination?.route in listOf(
-                    NavRoutes.ALBUMS,
-                    NavRoutes.ALBUM_DETAIL,
-                    NavRoutes.TRASH,
-                    NavRoutes.ALBUM_ITEM_DETAIL,
-                    NavRoutes.QUICK_ACCESS,
-                    NavRoutes.QUICK_ACCESS_DETAIL
-                )) || (currentDestination?.route == NavRoutes.SEARCH && isSearchOwnedByAlbums)
-                Screen.Settings -> currentDestination?.route == NavRoutes.SETTINGS
-            }
-            NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = null) },
-                label = if (showLabel) { { Text(stringResource(screen.labelId)) } } else null,
-                selected = isSelected,
-                onClick = {
-                    if (isSelected) {
-                        onTabReselected(screen)
-                    } else {
-                        // Clear selection when moving to a new tab
-                        galleryViewModel.setSelectionMode(false)
-                        galleryViewModel.setAlbumSelectionMode(false)
-                        galleryViewModel.onSearchQueryChange("")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp) // 👈 Height yahan control hogi
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { item ->
 
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                val selected = currentRoute == item.route
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable {
+                            if (!selected) onNavigate(item.route)
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                        tint = if (selected)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(Modifier.height(2.dp))
+
+                    Text(
+                        text = item.label,
+                        fontSize = 11.sp,
+                        color = if (selected)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            )
+            }
         }
     }
+ }
 }
