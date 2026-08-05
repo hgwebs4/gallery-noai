@@ -1,6 +1,5 @@
 package com.tama.gallerynoai
 
-import androidx.compose.foundation.layout.height
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,11 +8,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Photo
@@ -25,22 +24,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tama.gallerynoai.ui.navigation.NavRoutes
-import androidx.compose.ui.graphics.toArgb
 import com.tama.gallerynoai.ui.theme.GalleryTheme
 import com.tama.gallerynoai.ui.viewmodel.GalleryViewModel
 import com.tama.gallerynoai.ui.viewmodel.SettingsViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -123,6 +123,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Scaffold(
+                    contentWindowInsets = WindowInsets.systemBars,
                     bottomBar = {
                         if (showBottomBar) {
                             BottomNavigationBar(
@@ -254,7 +255,7 @@ fun BottomNavigationBar(
         )
 
     NavigationBar(
-        modifier = Modifier.height(60.dp),
+        windowInsets = NavigationBarDefaults.windowInsets,
         containerColor = Color.Transparent,
         tonalElevation = 0.dp
     ) {
